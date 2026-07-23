@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>PrintFarm OS - Cadastro de Insumo</title>
+    <style>
+        body { font-family: sans-serif; background: #121214; color: #fff; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; background: #202024; color: #fff; border: 1px solid #323238; border-radius: 4px; }
+        button { background: #00875f; color: #fff; padding: 12px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>⚙️ Cadastrar Novo Insumo</h2>
+
+    <form id="formInsumo">
+        <div class="form-group">
+            <label>Categoria:</label>
+            <select id="categoria">
+                <option value="FILAMENTO">FILAMENTO</option>
+                <option value="ENERGIA">ENERGIA</option>
+                <option value="OPERAÇÃO">OPERAÇÃO</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Nome do Insumo:</label>
+            <input type="text" id="nome" placeholder="Ex: PLA Silk Gold 1kg" required>
+        </div>
+
+        <div class="form-group">
+            <label>Unidade:</label>
+            <select id="unidade">
+                <option value="R$/kg">R$/kg</option>
+                <option value="R$/kWh">R$/kWh</option>
+                <option value="R$/h">R$/h</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Valor Unitário (R$):</label>
+            <input type="number" step="0.01" id="valor" required>
+        </div>
+
+        <button type="submit">Salvar Insumo</button>
+    </form>
+
+    <script>
+        const API_URL = "SUA_URL_DO_GOOGLE_APPS_SCRIPT_AQUI";
+
+        document.getElementById('formInsumo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const dados = {
+                categoria: document.getElementById('categoria').value,
+                nome: document.getElementById('nome').value,
+                unidade: document.getElementById('unidade').value,
+                valor: document.getElementById('valor').value
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(dados)
+            });
+
+            if (response.ok) {
+                alert("Insumo cadastrado com sucesso no Google Sheets!");
+                document.getElementById('formInsumo').reset();
+            }
+        });
+    </script>
+</body>
+</html>
