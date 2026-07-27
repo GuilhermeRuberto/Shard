@@ -48,8 +48,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="tempo">Tempo Estimado (HH:MM)</label>
-                            <input type="time" id="tempo" required>
+                            <label for="tempo">Tempo Estimado (Horas / HH:MM)</label>
+                            <input type="text" id="tempo" placeholder="Ex: 2.5 ou 02:30" required oninput="calcularTotais()">
                         </div>
                         <div class="form-group">
                             <label for="foto">URL da Foto</label>
@@ -66,7 +66,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>Composição Técnica & Insumos (BOM)</h3>
-                        <button type="button" id="addInsumoBtn" class="btn-secondary">
+                        <button type="button" id="addInsumoBtn" class="btn-secondary" onclick="adicionarLinhaBOM()">
                             <i data-lucide="plus"></i> Adicionar Insumo
                         </button>
                     </div>
@@ -77,8 +77,7 @@
                                 <tr>
                                     <th>Tipo de Insumo</th>
                                     <th>Nome do Insumo</th>
-                                    <th>Quantidade (kg/un/h)</th>
-                                    <th>Custo Estimado</th>
+                                    <th>Quantidade (g/un)</th>
                                     <th>Ação</th>
                                 </tr>
                             </thead>
@@ -88,20 +87,86 @@
                         </table>
                     </div>
 
-                    <!-- Resumo dos Totais (Calculados via JS) -->
-                    <div class="totals-summary">
-                        <div class="summary-row">
-                            <span>Peso Total Estimado:</span>
-                            <strong id="pesoTotal">0.000 kg</strong>
+                    <!-- ⚡ Configuração de Energia & Valores do Banco -->
+                    <div class="fixed-costs-card">
+                        <div class="fixed-costs-header">
+                            <i data-lucide="zap"></i> <span>Perfil Energético da Máquina</span>
                         </div>
-                        <div class="summary-row">
-                            <span>Custo Direto de Produção:</span>
-                            <strong id="custoProd">R$ 0,00</strong>
+                        <div class="fixed-costs-grid">
+                            <div class="fixed-cost-item">
+                                <label for="perfilEnergia">Perfil de Consumo</label>
+                                <select id="perfilEnergia" onchange="calcularTotais()">
+                                    
+                                </select>
+                            </div>
+
+                            <!-- Taxas Fixas Lidas do Sistema (Display Compacto) -->
+                            <div class="rates-display-group">
+                                <div class="rate-badge">
+                                    <span class="rate-title">Tarifa kWh (CUS_01)</span>
+                                    <strong id="display-cus01">R$ 0,76</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Depreciação/h (CUS_02)</span>
+                                    <strong id="display-cus02">R$ 0,58</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Manutenção/h (CUS_03)</span>
+                                    <strong id="display-cus03">R$ 0,70</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Margem Erro (CUS_04)</span>
+                                    <strong id="display-cus04">10,00%</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="summary-row highlight">
-                            <span>Custo Total Final (+ Margem/Taxas):</span>
-                            <strong id="custoTotal">R$ 0,00</strong>
+                    </div>
+
+                    <!-- 📊 Resumo dos Totais (Compacto + Detalhado expansível) -->
+                    <div class="totals-summary-card">
+                        
+                        <!-- 1. RESUMO COMPACTO (Sempre Visível) -->
+                        <div class="summary-compact">
+                            <div class="compact-item">
+                                <span class="label">Peso Total (Filamentos):</span>
+                                <strong id="pesoTotal" class="value">0.000 kg</strong>
+                            </div>
+                            <div class="compact-item highlight">
+                                <span class="label">Custo Total de Produção:</span>
+                                <strong id="custoTotal" class="value-highlight">R$ 0,00</strong>
+                            </div>
+                            <button type="button" class="btn-toggle-details" onclick="toggleDetalhesCusto()">
+                                <span id="toggleText">+ Detalhes da Composição</span>
+                                <i data-lucide="chevron-down" id="toggleIcon"></i>
+                            </button>
                         </div>
+
+                        <!-- 2. DETALHAMENTO COMPLETO (Expansível) -->
+                        <div id="detalhesCusto" class="summary-details-panel hidden">
+                            <div class="details-grid">
+                                <div class="detail-row">
+                                    <span>Material / Insumos Diretos:</span>
+                                    <strong id="det-insumos">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Consumo de Energia (<span id="det-kwh-val">0.00</span> kWh):</span>
+                                    <strong id="det-energia">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Depreciação de Máquina:</span>
+                                    <strong id="det-depreciacao">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Manutenção Preventiva:</span>
+                                    <strong id="det-manutencao">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row error-margin">
+                                    <span>Margem de Seguridade/Erro:</span>
+                                    <strong id="det-margem">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Botão de Envio Principal -->
@@ -118,5 +183,8 @@
 
     <!-- Script principal -->
     <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

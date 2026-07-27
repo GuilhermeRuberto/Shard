@@ -259,3 +259,206 @@ input:focus, select:focus {
     color: #ef4444;
     font-size: 1.2rem;
 }
+
+/* Card de Custos Operacionais Fixos (Máquina) */
+.fixed-costs-card {
+  background-color: #f8f9fa;
+  border: 1px dashed #cccccc;
+  border-radius: 6px;
+  padding: 12px 15px;
+  margin: 15px 0;
+}
+
+.fixed-costs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555555;
+  margin-bottom: 10px;
+}
+
+.fixed-costs-header svg {
+  width: 16px;
+  height: 16px;
+  color: #f39c12;
+}
+
+.fixed-costs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.fixed-cost-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fixed-cost-item label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+}
+
+.badge-cus {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: bold;
+  background-color: #e2e8f0;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.fixed-cost-input {
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #ffffff;
+}
+
+/* Card de Custos Operacionais & Perfil Energético */
+.fixed-costs-card {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 20px 0;
+}
+
+.fixed-costs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 12px;
+}
+
+.fixed-costs-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 15px;
+  align-items: center;
+}
+
+.rates-display-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.rate-badge {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.rate-title {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rate-badge strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+/* Painel de Totais (Compacto + Expansível) */
+.totals-summary-card {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: 20px;
+}
+
+.summary-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.compact-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.compact-item .label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.compact-item .value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.compact-item.highlight .value-highlight {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.btn-toggle-details {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #38bdf8;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-toggle-details:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.summary-details-panel {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #1e293b;
+}
+
+.summary-details-panel.hidden {
+  display: none;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  background: #1e293b;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.detail-row.error-margin {
+  background: #331f19;
+  color: #ffedd5;
+}
