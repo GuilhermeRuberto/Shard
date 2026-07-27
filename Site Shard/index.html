@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shard ERP</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <h2 class="brand">Shard <span>ERP</span></h2>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active"><i data-lucide="box"></i> <span>Cadastro de Produtos</span></a>
+                <a href="#" class="nav-item"><i data-lucide="layers"></i> <span>Catálogo / Estoque</span></a>
+                <a href="#" class="nav-item"><i data-lucide="cpu"></i> <span>Frota & Máquinas</span></a>
+                <a href="#" class="nav-item"><i data-lucide="list-todo"></i> <span>Fila de Produção</span></a>
+                <a href="#" class="nav-item"><i data-lucide="dollar-sign"></i> <span>Financeiro</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item"><i data-lucide="settings"></i> <span>Configurações</span></a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <form id="productForm">
+                
+                <!-- Card 1: Informações do Produto Pai -->
+                <div class="card">
+                    <h3>Informações do Produto (Pai)</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nome">Nome do Produto</label>
+                            <input type="text" id="nome" placeholder="Ex: Suporte de Headset" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoria">Categoria</label>
+                            <select id="categoria" required>
+                                <option value="">Selecione...</option>
+                                <option value="Decoração">Decoração</option>
+                                <option value="Utilitários">Utilitários</option>
+                                <option value="Prototipagem">Prototipagem</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tempo">Tempo Estimado (HH:MM)</label>
+                            <input type="time" id="tempo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="foto">URL da Foto</label>
+                            <input type="url" id="foto" placeholder="https://link-da-imagem.com">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="arquivo">Link do Arquivo 3D (3MF / G-Code / Drive)</label>
+                            <input type="url" id="arquivo" placeholder="https://drive.google.com/...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Composição Técnica & BOM -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Composição Técnica & Insumos (BOM)</h3>
+                        <button type="button" id="addInsumoBtn" class="btn-secondary">
+                            <i data-lucide="plus"></i> Adicionar Insumo
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="bom-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Insumo</th>
+                                    <th>Nome do Insumo</th>
+                                    <th>Quantidade (kg/un/h)</th>
+                                    <th>Custo Estimado</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bomTbody">
+                                <!-- Linhas dinâmicas criadas via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumo dos Totais (Calculados via JS) -->
+                    <div class="totals-summary">
+                        <div class="summary-row">
+                            <span>Peso Total Estimado:</span>
+                            <strong id="pesoTotal">0.000 kg</strong>
+                        </div>
+                        <div class="summary-row">
+                            <span>Custo Direto de Produção:</span>
+                            <strong id="custoProd">R$ 0,00</strong>
+                        </div>
+                        <div class="summary-row highlight">
+                            <span>Custo Total Final (+ Margem/Taxas):</span>
+                            <strong id="custoTotal">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Envio Principal -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="save"></i> Salvar e Enviar para o Google Sheets
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </main>
+    </div>
+
+    <!-- Script principal -->
+    <script src="script.js"></script>
+</body>
+</html>
