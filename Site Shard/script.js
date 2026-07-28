@@ -382,7 +382,10 @@ async function salvarProduto(event) {
 
     const selectPerfil = document.getElementById("perfilEnergia");
     const watts = parseFloat(selectPerfil?.options[selectPerfil.selectedIndex]?.dataset?.watts) || 0;
-    const kwhConsumido = (watts / 1000) * horasTotal;
+    
+    // Arredonda consumo de energia e horas para 4 casas decimais (evita dízimas)
+    const kwhConsumido = Number(((watts / 1000) * horasTotal).toFixed(4));
+    const horasParaSalvar = Number(horasTotal.toFixed(4));
 
     const inputFoto = document.getElementById("foto") || document.getElementById("fotoUrl");
     const inputArquivo = document.getElementById("arquivo") || document.getElementById("arquivoUrl");
@@ -399,6 +402,7 @@ async function salvarProduto(event) {
     };
 
     const bom = [];
+    let custoMateriais = 0;
 
     const linhasBOM = document.querySelectorAll(".linha-bom");
     linhasBOM.forEach(tr => {
@@ -420,6 +424,12 @@ async function salvarProduto(event) {
           quantidadeFinal = qtdInput / 1000;
         }
 
+        // Arredonda a quantidade de insumo para até 4 casas decimais
+        quantidadeFinal = Number(quantidadeFinal.toFixed(4));
+
+        const precoUnit = parseFloat(selectInsumo.options[selectInsumo.selectedIndex]?.dataset?.preco) || 0;
+        custoMateriais += (quantidadeFinal * precoUnit);
+
         const nomeLimpo = nomeInsumoText.replace(/^CUS_\d+\s*-\s*/i, "").trim();
 
         bom.push({
@@ -431,6 +441,14 @@ async function salvarProduto(event) {
       }
     });
 
+    const tarifaKwh = TAXAS_SISTEMA["CUS_01"] ? TAXAS_SISTEMA["CUS_01"].valor : 0;
+    const depHora   = TAXAS_SISTEMA["CUS_02"] ? TAXAS_SISTEMA["CUS_02"].valor : 0;
+    const manHora   = TAXAS_SISTEMA["CUS_03"] ? TAXAS_SISTEMA["CUS_03"].valor : 0;
+
+    const custoEnergia = kwhConsumido * tarifaKwh;
+    const custoDepreciacao = horasParaSalvar * depHora;
+    const custoManutencao = horasParaSalvar * manHora;
+
     if (kwhConsumido > 0) {
       bom.push({
         idCus: "CUS_01",
@@ -439,18 +457,30 @@ async function salvarProduto(event) {
         quantidade: kwhConsumido
       });
     }
-    if (horasTotal > 0) {
+    if (horasParaSalvar > 0) {
       bom.push({
         idCus: "CUS_02",
         tipo: "Operação",
         nome: TAXAS_SISTEMA["CUS_02"]?.nome || "OPERAÇÃO MÉD DEPREC P/HORA",
-        quantidade: horasTotal
+        quantidade: horasParaSalvar
       });
       bom.push({
         idCus: "CUS_03",
         tipo: "Operação",
         nome: TAXAS_SISTEMA["CUS_03"]?.nome || "OPERAÇÃO MÉD MANUT P/HORA",
-        quantidade: horasTotal
+        quantidade: horasParaSalvar
+      });
+    }
+
+    // Subtotal dos custos diretos arredondado para 2 casas decimais (Valor em Reais)
+    const subtotalDireto = Number((custoMateriais + custoEnergia + custoDepreciacao + custoManutencao).toFixed(2));
+
+    if (TAXAS_SISTEMA["CUS_04"] && subtotalDireto > 0) {
+      bom.push({
+        idCus: "CUS_04",
+        tipo: "Margem",
+        nome: TAXAS_SISTEMA["CUS_04"]?.nome || "Margem de Seguridade",
+        quantidade: subtotalDireto
       });
     }
 
