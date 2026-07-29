@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shard ERP</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <h2 class="brand">Shard <span>ERP</span></h2>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active"><i data-lucide="box"></i> <span>Cadastro de Produtos</span></a>
+                <a href="#" class="nav-item"><i data-lucide="layers"></i> <span>Catálogo / Estoque</span></a>
+                <a href="#" class="nav-item"><i data-lucide="cpu"></i> <span>Frota & Máquinas</span></a>
+                <a href="#" class="nav-item"><i data-lucide="list-todo"></i> <span>Fila de Produção</span></a>
+                <a href="#" class="nav-item"><i data-lucide="dollar-sign"></i> <span>Financeiro</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item"><i data-lucide="settings"></i> <span>Configurações</span></a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <form id="productForm">
+                
+                <!-- Card 1: Informações do Produto Pai -->
+                <div class="card">
+                    <h3>Informações do Produto (Pai)</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nome">Nome do Produto</label>
+                            <input type="text" id="nome" placeholder="Ex: Suporte de Headset" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoria">Categoria</label>
+                            <select id="categoria" required>
+                                <option value="">Selecione...</option>
+                                <option value="Decoração">Decoração</option>
+                                <option value="Utilitários">Utilitários</option>
+                                <option value="Prototipagem">Prototipagem</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tempo">Tempo Estimado (Horas / HH:MM)</label>
+                            <input type="text" id="tempo" placeholder="Ex: 2.5 ou 02:30" required oninput="calcularTotais()">
+                        </div>
+                        <div class="form-group">
+                            <label for="foto">URL da Foto</label>
+                            <input type="url" id="foto" placeholder="https://link-da-imagem.com">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="arquivo">Link do Arquivo 3D (3MF / G-Code / Drive)</label>
+                            <input type="url" id="arquivo" placeholder="https://drive.google.com/...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Composição Técnica & BOM -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Composição Técnica & Insumos (BOM)</h3>
+                        <button type="button" id="addInsumoBtn" class="btn-secondary" onclick="adicionarLinhaBOM()">
+                            <i data-lucide="plus"></i> Adicionar Insumo
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="bom-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Insumo</th>
+                                    <th>Nome do Insumo</th>
+                                    <th>Quantidade (g/un)</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bomTbody">
+                                <!-- Linhas dinâmicas criadas via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ⚡ Configuração de Energia & Valores do Banco -->
+                    <div class="fixed-costs-card">
+                        <div class="fixed-costs-header">
+                            <i data-lucide="zap"></i> <span>Perfil Energético da Máquina</span>
+                        </div>
+                        <div class="fixed-costs-grid">
+                            <div class="fixed-cost-item">
+                                <label for="perfilEnergia">Perfil de Consumo</label>
+                                <select id="perfilEnergia" onchange="calcularTotais()">
+                                    
+                                </select>
+                            </div>
+
+                            <!-- Taxas Fixas Lidas do Sistema (Display Compacto) -->
+                            <div class="rates-display-group">
+                                <div class="rate-badge">
+                                    <span class="rate-title">Tarifa kWh (CUS_01)</span>
+                                    <strong id="display-cus01">R$ 0,76</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Depreciação/h (CUS_02)</span>
+                                    <strong id="display-cus02">R$ 0,58</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Manutenção/h (CUS_03)</span>
+                                    <strong id="display-cus03">R$ 0,70</strong>
+                                </div>
+                                <div class="rate-badge">
+                                    <span class="rate-title">Margem Erro (CUS_04)</span>
+                                    <strong id="display-cus04">10,00%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📊 Resumo dos Totais (Compacto + Detalhado expansível) -->
+                    <div class="totals-summary-card">
+                        
+                        <!-- 1. RESUMO COMPACTO (Sempre Visível) -->
+                        <div class="summary-compact">
+                            <div class="compact-item">
+                                <span class="label">Peso Total (Filamentos):</span>
+                                <strong id="pesoTotal" class="value">0.000 kg</strong>
+                            </div>
+                            <div class="compact-item highlight">
+                                <span class="label">Custo Total de Produção:</span>
+                                <strong id="custoTotal" class="value-highlight">R$ 0,00</strong>
+                            </div>
+                            <button type="button" class="btn-toggle-details" onclick="toggleDetalhesCusto()">
+                                <span id="toggleText">+ Detalhes da Composição</span>
+                                <i data-lucide="chevron-down" id="toggleIcon"></i>
+                            </button>
+                        </div>
+
+                        <!-- 2. DETALHAMENTO COMPLETO (Expansível) -->
+                        <div id="detalhesCusto" class="summary-details-panel hidden">
+                            <div class="details-grid">
+                                <div class="detail-row">
+                                    <span>Material / Insumos Diretos:</span>
+                                    <strong id="det-insumos">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Consumo de Energia (<span id="det-kwh-val">0.00</span> kWh):</span>
+                                    <strong id="det-energia">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Depreciação de Máquina:</span>
+                                    <strong id="det-depreciacao">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Manutenção Preventiva:</span>
+                                    <strong id="det-manutencao">R$ 0,00</strong>
+                                </div>
+                                <div class="detail-row error-margin">
+                                    <span>Margem de Seguridade/Erro:</span>
+                                    <strong id="det-margem">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Botão de Envio Principal -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="save"></i> Salvar e Enviar para o Google Sheets
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </main>
+    </div>
+
+    <!-- Script principal -->
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

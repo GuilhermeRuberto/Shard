@@ -1,4 +1,6 @@
-/* Reset & Base Styles */
+/* ==========================================
+   1. CONFIGURAÇÕES GLOBAIS & RESET
+   ================================---------- */
 * {
     margin: 0;
     padding: 0;
@@ -7,43 +9,131 @@
 }
 
 body {
-    background-color: #0f172a;
-    color: #f8fafc;
-    min-height: 100vh;
+    background-color: #0b0f19;
+    color: #e2e8f0;
+    height: 100vh;
+    overflow: hidden;
 }
 
-.app-container {
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   2. SPLASH SCREEN (Animação de Entrada)
+   ================================---------- */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0b0f19;
     display: flex;
-    min-height: 100vh;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeOut 0.5s ease 1.5s forwards;
 }
 
-/* Sidebar Styling */
+.splash-content {
+    text-align: center;
+}
+
+.splash-logo {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.splash-logo span {
+    color: #38bdf8;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(56, 189, 248, 0.2);
+    border-top-color: #38bdf8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+/* ==========================================
+   3. APP LAYOUT & ROTEAMENTO (SPA)
+   ================================---------- */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    animation: fadeIn 0.6s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* --- SIDEBAR --- */
 .sidebar {
     width: 260px;
-    background-color: #1e293b;
-    border-right: 1px solid #334155;
-    padding: 24px 16px;
+    background-color: #111827;
+    border-right: 1px solid #1f2937;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    transition: width 0.3s ease;
     flex-shrink: 0;
 }
 
-.brand {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #38bdf8;
-    margin-bottom: 32px;
-    padding-left: 8px;
+.sidebar-header {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1f2937;
 }
 
-.brand span {
-    color: #94a3b8;
-    font-size: 0.9rem;
+.brand-title {
+    font-size: 1.25rem;
+    color: #fff;
+    font-weight: 700;
+}
+
+.brand-sub {
+    color: #38bdf8;
     font-weight: 400;
 }
 
-.nav-menu {
+.btn-collapse {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 5px;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+
+.btn-collapse:hover {
+    color: #fff;
+}
+
+.sidebar-nav {
+    padding: 15px 10px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -53,36 +143,91 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
-    color: #94a3b8;
-    text-decoration: none;
+    width: 100%;
+    padding: 12px 15px;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    text-align: left;
     border-radius: 8px;
+    cursor: pointer;
     font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
     transition: all 0.2s ease;
 }
 
-.nav-item:hover, .nav-item.active {
-    background-color: #334155;
-    color: #f8fafc;
+.nav-item i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-item:hover {
+    background-color: rgba(56, 189, 248, 0.08);
+    color: #38bdf8;
 }
 
 .nav-item.active {
+    background-color: #1e293b;
+    color: #38bdf8;
     border-left: 4px solid #38bdf8;
 }
 
-.nav-item i {
-    width: 20px;
-    height: 20px;
+/* Estado Recolhido da Sidebar */
+.sidebar.collapsed {
+    width: 75px;
 }
 
-/* Main Content Area */
+.sidebar.collapsed .brand-title,
+.sidebar.collapsed .nav-text {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+}
+
+/* --- MAIN CONTENT --- */
 .main-content {
     flex: 1;
-    padding: 32px;
-    max-width: 1100px;
+    background-color: #0b0f19;
+    overflow-y: auto;
+    padding: 30px;
 }
 
-/* Cards Layout */
+.view-section {
+    display: none;
+}
+
+.view-section.active {
+    display: block;
+    animation: contentFade 0.3s ease;
+}
+
+@keyframes contentFade {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.content-header {
+    margin-bottom: 25px;
+}
+
+.content-header h2 {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.content-header p {
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+
+/* ==========================================
+   4. COMPONENTES DE CARTÕES & FORMULÁRIOS
+   ================================---------- */
 .card {
     background-color: #1e293b;
     border: 1px solid #334155;
@@ -109,7 +254,6 @@ body {
     margin-bottom: 0;
 }
 
-/* Form Grid */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -147,7 +291,9 @@ input:focus, select:focus {
     border-color: #38bdf8;
 }
 
-/* Table Styling */
+/* ==========================================
+   5. TABELAS & BOM (Composição)
+   ================================---------- */
 .table-container {
     overflow-x: auto;
     margin-bottom: 20px;
@@ -178,7 +324,9 @@ input:focus, select:focus {
     width: 100%;
 }
 
-/* Buttons */
+/* ==========================================
+   6. BOTÕES
+   ================================---------- */
 .btn-primary, .btn-secondary, .btn-danger {
     display: inline-flex;
     align-items: center;
@@ -225,240 +373,146 @@ input:focus, select:focus {
     background-color: #dc2626;
 }
 
-/* Totals Summary */
-.totals-summary {
-    background-color: #0f172a;
-    border: 1px solid #334155;
+/* ==========================================
+   7. PAINEL DE CUSTOS & TOTAIS
+   ================================---------- */
+.fixed-costs-card {
+    background-color: #1e293b;
+    border: 1px dashed #334155;
     border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.95rem;
-    color: #94a3b8;
-}
-
-.summary-row strong {
-    color: #f8fafc;
-}
-
-.summary-row.highlight {
-    border-top: 1px solid #334155;
-    padding-top: 10px;
-    font-size: 1.1rem;
-    color: #ef4444;
-}
-
-.summary-row.highlight strong {
-    color: #ef4444;
-    font-size: 1.2rem;
-}
-
-/* Card de Custos Operacionais Fixos (Máquina) */
-.fixed-costs-card {
-  background-color: #f8f9fa;
-  border: 1px dashed #cccccc;
-  border-radius: 6px;
-  padding: 12px 15px;
-  margin: 15px 0;
+    padding: 14px 18px;
+    margin: 20px 0;
 }
 
 .fixed-costs-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #555555;
-  margin-bottom: 10px;
-}
-
-.fixed-costs-header svg {
-  width: 16px;
-  height: 16px;
-  color: #f39c12;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 12px;
 }
 
 .fixed-costs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.fixed-cost-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.fixed-cost-item label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #666666;
-}
-
-.badge-cus {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: bold;
-  background-color: #e2e8f0;
-  color: #475569;
-  padding: 2px 6px;
-  border-radius: 4px;
-  width: fit-content;
-}
-
-.fixed-cost-input {
-  font-size: 0.85rem;
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background-color: #ffffff;
-}
-
-/* Card de Custos Operacionais & Perfil Energético */
-.fixed-costs-card {
-  background-color: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
-  padding: 14px 18px;
-  margin: 20px 0;
-}
-
-.fixed-costs-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 12px;
-}
-
-.fixed-costs-grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 15px;
-  align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 15px;
+    align-items: center;
 }
 
 .rates-display-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
 }
 
 .rate-badge {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: flex;
-  flex-direction: column;
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
 }
 
 .rate-title {
-  font-size: 0.68rem;
-  color: #64748b;
-  font-weight: 500;
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-weight: 500;
 }
 
 .rate-badge strong {
-  font-size: 0.85rem;
-  color: #0f172a;
+    font-size: 0.85rem;
+    color: #f8fafc;
 }
 
 /* Painel de Totais (Compacto + Expansível) */
 .totals-summary-card {
-  background-color: #0f172a;
-  color: #ffffff;
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-top: 20px;
+    background-color: #0f172a;
+    color: #ffffff;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 20px;
 }
 
 .summary-compact {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .compact-item {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .compact-item .label {
-  font-size: 0.75rem;
-  color: #94a3b8;
+    font-size: 0.75rem;
+    color: #94a3b8;
 }
 
 .compact-item .value {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #e2e8f0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e2e8f0;
 }
 
 .compact-item.highlight .value-highlight {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #38bdf8;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #38bdf8;
 }
 
 .btn-toggle-details {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #38bdf8;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #38bdf8;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
 }
 
 .btn-toggle-details:hover {
-  background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .summary-details-panel {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #1e293b;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #1e293b;
 }
 
 .summary-details-panel.hidden {
-  display: none;
+    display: none;
 }
 
 .details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
 }
 
 .detail-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.82rem;
-  color: #cbd5e1;
-  background: #1e293b;
-  padding: 8px 12px;
-  border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    background: #1e293b;
+    padding: 8px 12px;
+    border-radius: 6px;
 }
 
 .detail-row.error-margin {
-  background: #331f19;
-  color: #ffedd5;
+    background: #331f19;
+    color: #ffedd5;
 }
