@@ -1,0 +1,46 @@
+:root {
+    /* --- PALETA DE CORES SHARD ERP --- */
+    /* Base Escura */
+    --bg-app: #0b0f19;
+    --bg-sidebar: #14171d;
+    --bg-card: #1e222b;
+    --bg-input: #14171d;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+
+    /* Cores de Destaque (Accent) */
+    --color-primary: #8b5cf6; /* Roxo Shard */
+    --color-primary-dark: #6d28d9;
+    --color-secondary: #38bdf8; /* Ciano Tecnológico */
+    --color-success: #10b981; /* Verde */
+    --color-danger: #ef4444;   /* Vermelho */
+
+    /* Texto e Ícones */
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --icon-default: #94a3b8;
+
+    /* Bordas e Divisores */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-light: rgba(255, 255, 255, 0.04);
+
+    /* --- TIPOGRAFIA --- */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-base: 14px;
+    --font-size-h1: 24px;
+    --font-size-h2: 20px;
+    --font-size-h3: 16px;
+    --font-size-sm: 12px;
+
+    /* --- ESPAÇAMENTO E LAYOUT --- */
+    --header-height: 70px;
+    --sidebar-width: 260px;
+    --sidebar-width-collapsed: 70px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --transition-speed: 0.3s;
+
+    /* --- SOMBRAS --- */
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
