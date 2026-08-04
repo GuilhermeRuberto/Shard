@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shard ERP</title>
-    
+
     <!-- CSS Modular (Design System e Layouts) -->
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/global.css">
@@ -12,7 +13,11 @@
 
     <!-- FontAwesome para os ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
 
     <!-- Animação de Entrada (Splash Screen) -->
@@ -23,120 +28,116 @@
         </div>
     </div>
 
-    <!-- Container Principal do App (Oculto inicialmente pelo Splash) -->
-    <div id="app-container" class="app-layout hidden">
-        
+    <!-- Container Principal do App -->
+    <div id="app-container" class="app-container hidden">
+
         <!-- Barra Lateral (Sidebar) -->
         <aside id="sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <h2 class="brand-title">Shard <span class="brand-sub">ERP</span></h2>
-                <button id="toggle-sidebar" class="btn-collapse" title="Recolher Menu">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
+            <div class="brand">
+                Shard <span>ERP</span>
             </div>
 
-            <nav class="sidebar-nav">
+            <nav class="nav-menu">
                 <button class="nav-item active" data-view="catalogo">
                     <i class="fa-solid fa-boxes-stacked"></i>
-                    <span class="nav-text">Catálogo / Estoque</span>
+                    <span>Catálogo / Estoque</span>
                 </button>
                 <button class="nav-item" data-view="insumos">
                     <i class="fa-solid fa-cubes"></i>
-                    <span class="nav-text">Insumos & Matéria-Prima</span>
+                    <span>Insumos & Matéria-Prima</span>
                 </button>
-                <button class="nav-item" data-view="frota">
+                <button class="nav-item" data-view="frota-maquinas">
                     <i class="fa-solid fa-microchip"></i>
-                    <span class="nav-text">Frota & Máquinas</span>
+                    <span>Frota & Máquinas</span>
                 </button>
-                <button class="nav-item" data-view="producao">
+                <button class="nav-item" data-view="fila-producao">
                     <i class="fa-solid fa-list-check"></i>
-                    <span class="nav-text">Fila de Produção</span>
+                    <span>Fila de Produção</span>
                 </button>
                 <button class="nav-item" data-view="financeiro">
                     <i class="fa-solid fa-wallet"></i>
-                    <span class="nav-text">Financeiro</span>
+                    <span>Financeiro</span>
                 </button>
                 <button class="nav-item" data-view="configuracoes">
                     <i class="fa-solid fa-gear"></i>
-                    <span class="nav-text">Configurações</span>
+                    <span>Configurações</span>
                 </button>
             </nav>
         </aside>
 
         <!-- Área de Conteúdo Dinâmico (SPA Views) -->
         <main class="main-content">
-            
+
             <!-- Vista: Catálogo / Estoque -->
             <section id="view-catalogo" class="view-section active">
-                <header class="content-header">
-                    <h2>Catálogo e Estoque</h2>
-                    <p>Gerencie seus produtos acabados e visualize o status de estoque.</p>
-                </header>
                 <div class="view-body">
                     <!-- Inserido dinamicamente via catalogo.view.js -->
                 </div>
             </section>
 
             <!-- Vista: Cadastro de Produtos (BOM) -->
-            <section id="view-cadastro" class="view-section">
-                <header class="content-header">
-                    <h2>Novo Produto (BOM)</h2>
-                    <p>Cadastre novos itens, configure insumos e defina parâmetros produtivos.</p>
-                </header>
+            <section id="view-cadastro-produto" class="view-section hidden">
                 <div class="view-body">
-                    <!-- Inserido dinamicamente via cadastro.view.js -->
+                    <!-- Inserido dinamicamente via cadastro-produto.view.js -->
+                </div>
+            </section>
+
+            <!-- Vista: Detalhes do Produto -->
+            <section id="view-detalhe-produto" class="view-section hidden">
+                <div class="view-body">
+                    <!-- Inserido dinamicamente via detalhe-produto.view.js -->
                 </div>
             </section>
 
             <!-- Vista: Insumos -->
-            <section id="view-insumos" class="view-section">
-                <header class="content-header">
-                    <h2>Controle de Insumos</h2>
-                    <p>Matéria-prima, filamentos e custos base.</p>
-                </header>
+            <section id="view-insumos" class="view-section hidden">
                 <div class="view-body"></div>
             </section>
 
             <!-- Vista: Frota & Máquinas -->
-            <section id="view-frota" class="view-section">
-                <header class="content-header">
-                    <h2>Frota & Máquinas</h2>
-                    <p>Gerenciamento de impressoras e perfil energético.</p>
-                </header>
+            <section id="view-frota-maquinas" class="view-section hidden">
                 <div class="view-body"></div>
             </section>
 
             <!-- Vista: Fila de Produção -->
-            <section id="view-producao" class="view-section">
-                <header class="content-header">
-                    <h2>Fila de Impressão</h2>
-                    <p>Gerencie o fluxo produtivo do seu parque de máquinas.</p>
-                </header>
+            <section id="view-fila-producao" class="view-section hidden">
                 <div class="view-body"></div>
             </section>
 
             <!-- Vista: Financeiro -->
-            <section id="view-financeiro" class="view-section">
-                <header class="content-header">
-                    <h2>Financeiro</h2>
-                    <p>Fluxo de caixa, custos e faturamento.</p>
-                </header>
+            <section id="view-financeiro" class="view-section hidden">
                 <div class="view-body"></div>
             </section>
 
             <!-- Vista: Configurações -->
-            <section id="view-configuracoes" class="view-section">
-                <header class="content-header">
-                    <h2>Configurações do Sistema</h2>
-                    <p>Preferências gerais e parâmetros do ERP.</p>
-                </header>
+            <section id="view-configuracoes" class="view-section hidden">
                 <div class="view-body"></div>
             </section>
 
         </main>
     </div>
 
+    <script>
+        const fallbackHideSplash = () => {
+            const splash = document.getElementById('splash-screen');
+            const appContainer = document.getElementById('app-container');
+            if (splash) {
+                splash.classList.add('hidden');
+                splash.style.opacity = '0';
+                splash.style.visibility = 'hidden';
+                splash.style.display = 'none';
+            }
+            if (appContainer) {
+                appContainer.classList.remove('hidden');
+                appContainer.style.display = 'flex';
+            }
+            document.body.style.overflow = 'auto';
+        };
+        setTimeout(fallbackHideSplash, 5000);
+    </script>
+
     <!-- Ponto de entrada JavaScript modular -->
     <script type="module" src="js/app.js"></script>
 </body>
+
 </html>

@@ -133,6 +133,253 @@
     border-top: 1px solid var(--border-light);
 }
 
+/* --- CADASTRO DE PRODUTO --- */
+.card {
+    background: #161a2b;
+    border: 1px solid #222838;
+    border-radius: 18px;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #f8fafc;
+}
+
+.card-header .btn-secondary {
+    padding: 0.8rem 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.view-section#view-cadastro-produto input,
+.view-section#view-cadastro-produto select,
+.view-section#view-cadastro-produto textarea {
+    width: 100%;
+    background: #111726;
+    border: 1px solid #2a2f45;
+    color: #f8fafc;
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
+    font-size: 0.95rem;
+}
+
+.view-section#view-cadastro-produto input:focus,
+.view-section#view-cadastro-produto select:focus,
+.view-section#view-cadastro-produto textarea:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.14);
+}
+
+.view-section#view-cadastro-produto label,
+.view-section#view-cadastro-produto .form-group label {
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.table-container {
+    overflow-x: auto;
+    background: #13182a;
+    border: 1px solid #222838;
+    border-radius: 14px;
+    padding: 0.75rem;
+}
+
+.bom-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+}
+
+.bom-table th,
+.bom-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #202537;
+    color: #d1d5db;
+    font-size: 0.92rem;
+}
+
+.bom-table thead th {
+    color: #94a3b8;
+    background: #101421;
+    text-align: left;
+}
+
+.bom-table tbody tr:hover {
+    background: rgba(108, 92, 231, 0.08);
+}
+
+.bom-table select,
+.bom-table input {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #2a2f45;
+    border-radius: 10px;
+    color: #f8fafc;
+    padding: 0.7rem 0.85rem;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.fixed-costs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.fixed-cost-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.fixed-cost-item label {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.rates-display-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.totals-summary-card {
+    background: #141b2f;
+    border: 1px solid #222f45;
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-top: 1.25rem;
+}
+
+.summary-compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.compact-item {
+    background: #111726;
+    border: 1px solid #1f2a42;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    flex: 1;
+    min-width: 220px;
+}
+
+.compact-item.highlight {
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.18), rgba(56, 189, 125, 0.12));
+    border-color: rgba(108, 92, 231, 0.35);
+}
+
+.compact-item .label {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.compact-item .value,
+.value-highlight {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.btn-toggle-details {
+    background: #1f2640;
+    border: 1px solid #2a2f45;
+    color: #f8fafc;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-toggle-details:hover {
+    background: #2a3451;
+}
+
+.summary-details-panel {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #222f45;
+}
+
+.details-grid {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: #d1d5db;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #161d30;
+}
+
+.detail-row.error-margin {
+    color: #f8fafc;
+}
+
+@media (max-width: 760px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fixed-costs-grid,
+    .rates-display-group,
+    .summary-compact {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- CARDS DO CATÁLOGO --- */
 .catalogo-toolbar {
     display: flex;
@@ -158,5 +405,411 @@
     border-color: var(--color-primary);
 }
 
-.search-box i {
-    color: var(--
+/* Barra de Ferramentas */
+.toolbar-catalogo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #1e1e24;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+    flex: 1;
+    max-width: 420px;
+    color: #888;
+}
+
+.search-box input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 100%;
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.actions-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.view-toggle {
+    display: flex;
+    background: #1e1e24;
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid #333;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: #888;
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-icon.active, .btn-icon:hover {
+    color: #fff;
+    background: #6c5ce7;
+}
+
+.btn-primary {
+    background: #6c5ce7;
+    color: #fff;
+    border: none;
+    padding: 0.65rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #5b4bc4;
+}
+
+/* Modo Grade (Cards) */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.card-produto {
+    background: #1e1e24;
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-thumb {
+    width: 100%;
+    height: 150px;
+    background: #121214;
+}
+
+.card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-info {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.card-sku {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.card-title {
+    font-size: 1rem;
+    margin: 0;
+    color: #fff;
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.badge-categoria {
+    background: rgba(108, 92, 231, 0.2);
+    color: #a29bfe;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid #2a2a32;
+}
+
+.card-price {
+    font-weight: bold;
+    color: #2ed573;
+    font-size: 1.1rem;
+}
+
+/* Modo Lista (Tabela) */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e1e24;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.data-table th, .data-table td {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #2a2a32;
+    color: #ddd;
+    font-size: 0.9rem;
+}
+
+.data-table th {
+    background: #141418;
+    color: #888;
+    font-weight: 600;
+}
+
+.table-product-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.table-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.btn-icon-subtle {
+    background: transparent;
+    border: none;
+    color: #888;
+    padding: 0.4rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.btn-icon-subtle:hover {
+    color: #fff;
+    background: #2a2a32;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #888;
+    font-size: 1.2rem;
+}
+
+/* Cards e Linhas Clicáveis */
+.clickable-card, .clickable-row {
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.clickable-card:hover {
+    transform: translateY(-4px);
+    border-color: #6c5ce7;
+}
+
+.clickable-row:hover {
+    background: #25252d;
+}
+
+.link-detalhes {
+    font-size: 0.8rem;
+    color: #a29bfe;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ==========================================
+   VIEW DE DETALHE DO PRODUTO (PÁGINA COMPLETA)
+   ========================================== */
+.detalhe-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.btn-secondary {
+    background: #2a2a32;
+    color: #fff;
+    border: 1px solid #333;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-secondary:hover {
+    background: #33333d;
+}
+
+.detalhe-page-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .detalhe-page-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.detalhe-sidebar-card {
+    background: #1e1e24;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.detalhe-image-wrapper {
+    width: 100%;
+    height: 240px;
+    background: #121214;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.detalhe-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.specs-block h3 {
+    font-size: 0.95rem;
+    color: #a29bfe;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.specs-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.specs-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #2a2a32;
+    color: #ccc;
+}
+
+.detalhe-title-block h1 {
+    font-size: 1.8rem;
+    margin: 0;
+    color: #fff;
+}
+
+.detalhe-title-block .subtitle {
+    color: #888;
+    margin-top: 0.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: #1e1e24;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-card .label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.metric-card .value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-top: 0.4rem;
+}
+
+.insumos-block h2 {
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Card de Custos Operacionais & Perfil Energético (Versão Dark Theme) */
+.fixed-costs-card {
+    background-color: #0f172a;
+    border: 1px dashed #334155;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 20px 0;
+}
+
+.fixed-costs-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 12px;
+}
+
+.rate-badge {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.rate-badge strong {
+    font-size: 0.85rem;
+    color: #38bdf8;
+}
