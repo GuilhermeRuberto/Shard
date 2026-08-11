@@ -1,0 +1,54 @@
+Tabela : Catalogo
+
+A	ID SKU
+B	CATEGORIA
+C	NOME
+D	FOTO
+E	ARQUIVO
+F	TEMPO
+G	PESO PROD
+H	CUSTO PROD
+
+(A, id automático vindo do site)
+(B,C,D,E,F, são inputs que vem diretamente do usuário pelo campos do site)
+(G,H, são calculador a partir de informações vindas do site)
+
+
+Tabela : Catalogo Tecnico
+
+A	ID SKU
+B	ID CUSINS
+C	CATEGORIA
+D	NOME
+E	QUANTIDADE
+F	CUSTO ITEM
+
+(A,B, id automático vindo do site)
+(C,D,E, inserções de itens e valores do usuário através do site)
+(F, calculo feito a partir dos valores de QUANTIDADE(E)*o valor do item que vem a partir do ID CUSINS(B)
+
+
+Tabela : Tabela de Custos
+
+A	ID CUS
+B	CATEGORIA
+C	NOME
+D	UNIDADE
+
+(A, id do CUS)
+(B,C, Identificação)
+(D, unidade de preço, usada para o calculo do Catalogo Tecnico)
+
+
+Tabela : Estoque de insumos
+
+A	ID INS
+B	CATEGORIA
+C	NOME
+D	UNIDADE
+E	ESTOQUE
+
+(A, id do INS)
+(B,C, Identificação)
+(D, unidade de preço, usada para o calculo do Catalogo Tecnico)
+(E, quanto daquele insumo tem em estoque)
