@@ -42,7 +42,13 @@ export function initCadastroProduto(switchView) {
                     </div>
                     <div class="form-group">
                         <label for="tempo">Tempo Estimado (Horas / HH:MM)</label>
-                        <input type="text" id="tempo" placeholder="Ex: 2.5 ou 02:30" required>
+                        <div class="tempo-input-wrapper" style="display: flex; align-items: center; gap: 4px;">
+                            <input type="text" id="tempo" placeholder="Ex: 1.3 ou 01:30" required style="flex: 1;" autocomplete="off">
+                            <div class="tempo-stepper-btn" style="display: flex; flex-direction: column; gap: 2px;">
+                                <button type="button" id="btn-tempo-up" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; line-height: 1;" title="Aumentar">▲</button>
+                                <button type="button" id="btn-tempo-down" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; line-height: 1;" title="Diminuir">▼</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="foto">URL da Foto</label>
@@ -176,6 +182,9 @@ export function initCadastroProduto(switchView) {
     document.getElementById('perfilEnergia')?.addEventListener('change', calcularTotais);
     document.getElementById('productForm')?.addEventListener('submit', salvarProduto);
 
+    // Configuração dos Controles de Scroll e Setas para o Campo Tempo
+    configurarControlesTempo();
+
     // Delegação de eventos para as linhas dinâmicas da tabela BOM
     const bomTbody = document.getElementById('bomTbody');
     bomTbody?.addEventListener('change', (e) => {
@@ -201,6 +210,84 @@ export function initCadastroProduto(switchView) {
 
     // 3. Carregar Insumos e Configurações do Sheets
     carregarDadosDoSheets();
+}
+
+// =================================================================
+// LÓGICA DE CONTROLE DO CAMPO DE TEMPO (SCROLL, SETAS, PASSO 10)
+// =================================================================
+
+function configurarControlesTempo() {
+    const tempoInput = document.getElementById('tempo');
+    const btnUp = document.getElementById('btn-tempo-up');
+    const btnDown = document.getElementById('btn-tempo-down');
+
+    if (!tempoInput) return;
+
+    // Aumentar/Diminuir via botões laterais
+    btnUp?.addEventListener('click', () => alterarValorTempo(tempoInput, 1));
+    btnDown?.addEventListener('click', () => alterarValorTempo(tempoInput, -1));
+
+    // Aumentar/Diminuir via Scroll do Mouse sobre o input
+    tempoInput.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const direcao = e.deltaY < 0 ? 1 : -1;
+        alterarValorTempo(tempoInput, direcao);
+    });
+
+    // Aumentar/Diminuir via Teclas de Seta
+    tempoInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            alterarValorTempo(tempoInput, 1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            alterarValorTempo(tempoInput, -1);
+        }
+    });
+}
+
+function alterarValorTempo(input, direcao) {
+    let val = input.value.trim();
+
+    // Se estiver vazio, inicia do 0.0
+    if (!val) {
+        val = "0.0";
+    }
+
+    if (val.includes(':')) {
+        // Formato HH:MM -> Incrementa/Decrementa de 10 em 10 minutos
+        let partes = val.split(':');
+        let h = parseInt(partes[0], 10) || 0;
+        let m = parseInt(partes[1], 10) || 0;
+
+        m += direcao * 10;
+        if (m >= 60) {
+            h += Math.floor(m / 60);
+            m = m % 60;
+        } else if (m < 0) {
+            let minsNegativos = Math.abs(m);
+            let horasAAbater = Math.ceil(minsNegativos / 60);
+            h -= horasAAbater;
+            m = (60 - (minsNegativos % 60)) % 60;
+        }
+
+        if (h < 0) { h = 0; m = 0; }
+
+        const hStr = String(h);
+        const mStr = String(m).padStart(2, '0');
+        input.value = `${hStr}:${mStr}`;
+    } else {
+        // Formato Base 10 (Decimal) -> Incrementa/Decrementa de 0.1 em 0.1
+        let num = parseFloat(val.replace(',', '.')) || 0;
+        num += direcao * 0.1;
+        if (num < 0) num = 0;
+        
+        // Fixa em 1 casa decimal para evitar ruídos de ponto flutuante em JS
+        input.value = num.toFixed(1);
+    }
+
+    // Dispara evento para atualizar os cálculos
+    input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 // =================================================================
@@ -262,12 +349,14 @@ async function carregarDadosDoSheets() {
                 const nome = String(item.nome || "").trim();
                 const categoria = String(item.categoria || "Custos").trim() || "Custos";
                 const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0) || 0;
+                const unidade = String(item.unidade || "").trim();
 
                 LISTA_CUSTOS.push({
                     id,
                     nome,
                     categoria,
-                    precoUnidade
+                    precoUnidade,
+                    unidade
                 });
 
                 if (["CUS_01", "CUS_02", "CUS_03", "CUS_04"].includes(id)) {
@@ -276,10 +365,19 @@ async function carregarDadosDoSheets() {
                         valor: precoUnidade
                     };
                 }
+
+                if (id.toUpperCase().startsWith("CUS_05") || id.toUpperCase().startsWith("CUS_06") || unidade.toUpperCase().endsWith("W") || nome.toUpperCase().includes("PE ")) {
+                    PERFIS_ENERGIA.push({
+                        idCus: id,
+                        nome: nome,
+                        watts: precoUnidade
+                    });
+                }
             });
 
             dadosCarregados = true;
             atualizarBadgesTaxas();
+            atualizarSelectPerfilEnergia();
 
             const tbody = document.getElementById("bomTbody");
             if (tbody) tbody.innerHTML = "";
@@ -324,14 +422,14 @@ function atualizarSelectPerfilEnergia() {
 
     select.innerHTML = "";
     if (PERFIS_ENERGIA.length === 0) {
-        select.innerHTML = '<option value="PERFIL_DEFAULT">Perfil Padrão (0W)</option>';
+        select.innerHTML = '<option value="PERFIL_DEFAULT" data-watts="0">Perfil Padrão (0W)</option>';
         return;
     }
 
     PERFIS_ENERGIA.forEach((perfil, index) => {
         const option = document.createElement("option");
         option.value = perfil.idCus || `PERFIL_${index}`;
-        option.textContent = `${option.value} - ${perfil.nome} (~${perfil.watts}W)`;
+        option.textContent = `${option.value} - ${perfil.nome} (${perfil.watts}W)`;
         option.dataset.watts = perfil.watts;
         select.appendChild(option);
     });
@@ -350,7 +448,7 @@ function adicionarLinhaBOM() {
     const tiposUnicos = [...new Set(itensDisponiveis.map(item => item.categoria || item.tipo))];
     let optionsTipo = '<option value="">Selecione...</option>';
     tiposUnicos.forEach(tipo => {
-        optionsTipo += `<option value="${tipo}">${tipo}</option>`;
+        if (tipo) optionsTipo += `<option value="${tipo}">${tipo}</option>`;
     });
 
     const tr = document.createElement("tr");
@@ -423,24 +521,31 @@ function toggleDetalhesCusto() {
     }
 }
 
+/**
+ * Converte entradas '1:30' (HH:MM) ou '1.3' / '1,3' (Base 10) em Horas Decimais
+ */
+/**
+ * Converte entradas '1:30' (HH:MM) ou '1.3' / '1,3' (Base 10) em Horas Decimais
+ */
 function extrairHorasDecimais(inputTempo) {
     if (!inputTempo) return 0;
+    
+    // Normaliza a string removendo espaços e substituindo vírgula por ponto
     let texto = String(inputTempo).trim().replace(',', '.');
 
+    // Se contiver ':', trata como formato de relógio HH:MM ou HH:MM:SS
     if (texto.includes(':')) {
         const partes = texto.split(':');
-        return (parseFloat(partes[0]) || 0) + ((parseFloat(partes[1]) || 0) / 60) + ((parseFloat(partes[2]) || 0) / 3600);
-    }
-    return parseFloat(texto) || 0;
-}
+        const horas = parseFloat(partes[0]) || 0;
+        const minutos = parseFloat(partes[1]) || 0;
+        const segundos = parseFloat(partes[2]) || 0;
 
-function converterHorasParaHHMMSS(horasDecimais) {
-    if (!horasDecimais || isNaN(horasDecimais) || horasDecimais <= 0) return "00:00:00";
-    const totalSegundos = Math.round(horasDecimais * 3600);
-    const h = String(Math.floor(totalSegundos / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSegundos % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSegundos % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
+        return horas + (minutos / 60) + (segundos / 3600);
+    }
+
+    // Se for número direto em base 10 (ex: 1.3 ou 1.1)
+    const valorDecimal = parseFloat(texto);
+    return isNaN(valorDecimal) ? 0 : valorDecimal;
 }
 
 function obterWattsPerfilSelecionado(selectPerfil) {
@@ -473,7 +578,24 @@ function calcularTotais() {
         }
     });
 
-    const custoTotalFinal = custoMateriais;
+    const inputTempo = document.getElementById("tempo")?.value || "";
+    const horasTotal = extrairHorasDecimais(inputTempo);
+    const selectPerfil = document.getElementById("perfilEnergia");
+    const watts = obterWattsPerfilSelecionado(selectPerfil);
+
+    const kwhConsumido = (watts / 1000) * horasTotal;
+    const tarifaKwh = TAXAS_SISTEMA["CUS_01"] ? TAXAS_SISTEMA["CUS_01"].valor : 0;
+    const depHora   = TAXAS_SISTEMA["CUS_02"] ? TAXAS_SISTEMA["CUS_02"].valor : 0;
+    const manHora   = TAXAS_SISTEMA["CUS_03"] ? TAXAS_SISTEMA["CUS_03"].valor : 0;
+    const pctMargem = TAXAS_SISTEMA["CUS_04"] ? TAXAS_SISTEMA["CUS_04"].valor : 0;
+
+    const custoEnergia = kwhConsumido * tarifaKwh;
+    const custoDepreciacao = horasTotal * depHora;
+    const custoManutencao = horasTotal * manHora;
+
+    const subtotal = custoMateriais + custoEnergia + custoDepreciacao + custoManutencao;
+    const valorMargem = subtotal * pctMargem;
+    const custoTotalFinal = subtotal + valorMargem;
 
     if (document.getElementById("pesoTotal")) document.getElementById("pesoTotal").textContent = pesoFilamentosKg.toFixed(3) + " kg";
     if (document.getElementById("custoTotal")) document.getElementById("custoTotal").textContent = "R$ " + custoTotalFinal.toFixed(2).replace(".", ",");
@@ -503,17 +625,9 @@ async function salvarProduto(event) {
         const kwhConsumido = Number(((watts / 1000) * horasTotal).toFixed(4));
         const horasParaSalvar = Number(horasTotal.toFixed(4));
 
-        const produto = {
-            nome: document.getElementById("nome")?.value || "Sem Nome",
-            categoria: document.getElementById("categoria")?.value || "Geral",
-            foto: document.getElementById("foto")?.value || "",
-            arquivo: document.getElementById("arquivo")?.value || "",
-            tempoImpressao: Math.round(horasTotal * 60),
-            pesoProd: parseFloat(document.getElementById("pesoTotal")?.textContent) || 0
-        };
-
         const bom = [];
         let custoMateriais = 0;
+        let pesoFilamentosKg = 0;
 
         document.querySelectorAll(".linha-bom").forEach(tr => {
             const selectInsumo = tr.querySelector(".bom-insumo");
@@ -524,12 +638,17 @@ async function salvarProduto(event) {
             if (itemId && qtdInput > 0) {
                 let quantidadeFinal = qtdInput;
                 if (categoria.toLowerCase().includes("filamento")) {
-                    quantidadeFinal = Number((qtdInput / 1000).toFixed(4));
+                    const pesoKg = qtdInput / 1000;
+                    pesoFilamentosKg += pesoKg;
+                    quantidadeFinal = Number(pesoKg.toFixed(4));
                 }
 
                 const item = [...LISTA_INSUMOS, ...LISTA_CUSTOS].find(i => i.id === itemId);
                 const nomeItem = item ? item.nome : (selectInsumo.options[selectInsumo.selectedIndex]?.text || itemId);
                 const categoriaItem = item ? item.categoria : categoria || "GERAL";
+                const precoUnit = parseFloat(selectInsumo.options[selectInsumo.selectedIndex]?.dataset?.preco) || (item ? item.precoUnidade : 0);
+
+                custoMateriais += (quantidadeFinal * precoUnit);
 
                 bom.push({
                     id: itemId,
@@ -539,6 +658,15 @@ async function salvarProduto(event) {
                 });
             }
         });
+
+        const produto = {
+            nome: document.getElementById("nome")?.value || "Sem Nome",
+            categoria: document.getElementById("categoria")?.value || "Geral",
+            foto: document.getElementById("foto")?.value || "",
+            arquivo: document.getElementById("arquivo")?.value || "",
+            tempoImpressao: Number(horasTotal.toFixed(2)), // Salva diretamente como número em base 10 (ex: 1.3 ou 1.5)
+            pesoProd: Number(pesoFilamentosKg.toFixed(3))
+        };
 
         const tarifaKwh = TAXAS_SISTEMA["CUS_01"] ? TAXAS_SISTEMA["CUS_01"].valor : 0;
         const depHora   = TAXAS_SISTEMA["CUS_02"] ? TAXAS_SISTEMA["CUS_02"].valor : 0;

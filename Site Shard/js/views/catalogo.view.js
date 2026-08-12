@@ -1,46 +1,17 @@
-export const produtosExemplo = [
-    {
-        id: "PRD_001",
-        sku: "PROD_001",
-        nome: "Suporte Headset Premium",
-        categoria: "Acessórios",
-        foto: "https://via.placeholder.com/300/1e1e24/ffffff?text=Suporte+Headset",
-        arquivo: "https://drive.google.com/file/d/1suporte_headset",
-        tempoImpressao: 252,
-        pesoProd: 0.185,
-        custoProd: 15.60,
-        estoque: 14,
-        insumos: [
-            { nome: "Filamento PLA Preto", quantidade: "0.170 kg", custoUnitario: "R$ 0,08/g", custoTotal: "R$ 13,60" },
-            { nome: "Parafuso M3 x 12mm", quantidade: "4 un", custoUnitario: "R$ 0,20/un", custoTotal: "R$ 0,80" },
-            { nome: "Pés Anti-derrapantes", quantidade: "4 un", custoUnitario: "R$ 0,30/un", custoTotal: "R$ 1,20" }
-        ]
-    },
-    {
-        id: "PRD_002",
-        sku: "PROD_002",
-        nome: "Organizador de Cabos Desk",
-        categoria: "Utilitários",
-        foto: "https://via.placeholder.com/300/1e1e24/ffffff?text=Organizador+Cabos",
-        arquivo: "https://drive.google.com/file/d/2organizador_cabos",
-        tempoImpressao: 75,
-        pesoProd: 0.045,
-        custoProd: 4.20,
-        estoque: 32,
-        insumos: [
-            { nome: "Filamento PETG Cinza", quantidade: "0.045 kg", custoUnitario: "R$ 0,09/g", custoTotal: "R$ 4,05" },
-            { nome: "Fita Dupla Face 3M", quantidade: "10 cm", custoUnitario: "R$ 0,015/cm", custoTotal: "R$ 0,15" }
-        ]
-    }
-];
+// js/views/catalogo.view.js
+
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzus-0gell47fkLEfgwHsLd8v1QoG6k_0Qi5fmUyhG_Q2NYjFwCYm5NNKXcQKRyFDA1Vw/exec";
 
 let modoExibicao = 'cards';
-let produtosAtuais = [...produtosExemplo];
+let todosProdutos = [];
+let produtosAtuais = [];
+let carregando = false;
 
 export function initCatalogo(switchView) {
-    const container = document.querySelector('#view-catalogo .view-body');
+    const container = document.querySelector('#view-catalogo .view-body') || document.querySelector('.main-content');
     if (!container) return;
 
+    // 1. Renderiza a estrutura da toolbar e o container dos produtos
     container.innerHTML = `
         <div class="toolbar-catalogo">
             <div class="search-box">
@@ -66,12 +37,86 @@ export function initCatalogo(switchView) {
         </div>
 
         <div id="produtos-container">
-            ${renderConteudoProdutos(produtosAtuais, modoExibicao)}
+            <div class="empty-state">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p>Carregando produtos da planilha...</p>
+            </div>
         </div>
     `;
 
+    // 2. Registra os eventos de busca e botões
     bindEvents(switchView);
+
+    // 3. Busca os dados reais da planilha
+    carregarProdutosDoSheets(switchView);
 }
+
+// =================================================================
+// REQUISIÇÃO API GOOGLE SHEETS
+// =================================================================
+
+async function carregarProdutosDoSheets(switchView) {
+    const containerProdutos = document.getElementById('produtos-container');
+    if (!containerProdutos || carregando) return;
+
+    carregando = true;
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL);
+        const result = await response.json();
+
+        // Aceita a lista vinda de 'result.produtos' ou 'result.products'
+        const listaBruta = result.produtos || result.products || (Array.isArray(result) ? result : []);
+
+        // Mapeia e normaliza os dados vindos do Sheets
+        todosProdutos = listaBruta.map((p, index) => {
+            const tempoDec = Number(p.tempoImpressao || p.tempo || 0);
+            return {
+                id: p.id || p.sku || `PRD_${index + 1}`,
+                sku: p.sku || p.id || `SKU_${index + 1}`,
+                nome: p.nome || p.produto || "Produto Sem Nome",
+                categoria: p.categoria || "Geral",
+                foto: p.foto || p.imagem || "",
+                arquivo: p.arquivo || p.linkArquivo || "",
+                tempoImpressao: tempoDec, // Valor em base 10 (ex: 1.3)
+                pesoProd: Number(p.pesoProd || p.peso || 0),
+                custoProd: Number(p.custoProd || p.preco || p.custoTotal || 0),
+                estoque: Number(p.estoque || 0),
+                insumos: Array.isArray(p.insumos || p.bom) ? (p.insumos || p.bom) : []
+            };
+        });
+
+        produtosAtuais = [...todosProdutos];
+        containerProdutos.innerHTML = renderConteudoProdutos(produtosAtuais, modoExibicao);
+
+    } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        containerProdutos.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                <p>Erro ao carregar os produtos da planilha.</p>
+                <button id="btn-reprovar-fetch" class="btn-secondary" style="margin-top: 10px;">
+                    <i class="fa-solid fa-rotate-right"></i> Tentar Novamente
+                </button>
+            </div>
+        `;
+        document.getElementById('btn-reprovar-fetch')?.addEventListener('click', () => {
+            containerProdutos.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p>Reconectando à planilha...</p>
+                </div>
+            `;
+            carregarProdutosDoSheets(switchView);
+        });
+    } finally {
+        carregando = false;
+    }
+}
+
+// =================================================================
+// RENDERIZAÇÃO DOS COMPONENTES (CARDS E LISTA)
+// =================================================================
 
 function renderConteudoProdutos(produtos, modo) {
     if (produtos.length === 0) {
@@ -89,7 +134,7 @@ function renderConteudoProdutos(produtos, modo) {
                 ${produtos.map(p => `
                     <div class="card-produto clickable-card" data-id="${p.id}">
                         <div class="card-thumb">
-                            <img src="${p.foto}" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/300/121214/fff?text=Sem+Imagem'">
+                            <img src="${p.foto}" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/300/121214/ffffff?text=Sem+Imagem'">
                         </div>
                         <div class="card-info">
                             <span class="card-sku">${p.sku}</span>
@@ -99,7 +144,7 @@ function renderConteudoProdutos(produtos, modo) {
                                 <span class="stock-count">Estoque: <strong>${p.estoque} un</strong></span>
                             </div>
                             <div class="card-footer">
-                                <span class="card-price">R$ ${Number(p.custoProd || 0).toFixed(2)}</span>
+                                <span class="card-price">R$ ${p.custoProd.toFixed(2).replace('.', ',')}</span>
                                 <span class="link-detalhes">Ver detalhes <i class="fa-solid fa-chevron-right"></i></span>
                             </div>
                         </div>
@@ -117,9 +162,9 @@ function renderConteudoProdutos(produtos, modo) {
                         <th>SKU</th>
                         <th>Produto</th>
                         <th>Categoria</th>
-                        <th>Peso / Temp.</th>
+                        <th>Peso / Tempo</th>
                         <th>Estoque</th>
-                        <th>Preço</th>
+                        <th>Preço/Custo</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -129,14 +174,14 @@ function renderConteudoProdutos(produtos, modo) {
                             <td><strong>${p.sku}</strong></td>
                             <td>
                                 <div class="table-product-cell">
-                                    <img src="${p.foto}" class="table-thumb" alt="${p.nome}">
+                                    <img src="${p.foto}" class="table-thumb" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/50/121214/ffffff?text=3D'">
                                     <span>${p.nome}</span>
                                 </div>
                             </td>
                             <td><span class="badge-categoria">${p.categoria}</span></td>
-                            <td><small>${String(p.pesoProd || 0).replace('.', ',')} kg | ${String(p.tempoImpressao || 0)} min</small></td>
-                            <td>${p.estoque || 0} un</td>
-                            <td><strong>R$ ${Number(p.custoProd || 0).toFixed(2)}</strong></td>
+                            <td><small>${p.pesoProd.toFixed(3).replace('.', ',')} kg | ${formatarTempoExibicao(p.tempoImpressao)}</small></td>
+                            <td>${p.estoque} un</td>
+                            <td><strong>R$ ${p.custoProd.toFixed(2).replace('.', ',')}</strong></td>
                             <td>
                                 <button class="btn-icon-subtle" title="Ver Detalhes"><i class="fa-solid fa-chevron-right"></i></button>
                             </td>
@@ -148,6 +193,10 @@ function renderConteudoProdutos(produtos, modo) {
     `;
 }
 
+// =================================================================
+// EVENTOS E INTERAÇÕES
+// =================================================================
+
 function bindEvents(switchView) {
     const btnCards = document.getElementById('btn-view-cards');
     const btnLista = document.getElementById('btn-view-lista');
@@ -155,6 +204,7 @@ function bindEvents(switchView) {
     const btnNovo = document.getElementById('btn-novo-produto');
     const searchInput = document.getElementById('catalogo-search');
 
+    // Alternar para Visualização em Cards
     btnCards?.addEventListener('click', () => {
         modoExibicao = 'cards';
         btnCards.classList.add('active');
@@ -162,6 +212,7 @@ function bindEvents(switchView) {
         if (containerProdutos) containerProdutos.innerHTML = renderConteudoProdutos(produtosAtuais, 'cards');
     });
 
+    // Alternar para Visualização em Lista
     btnLista?.addEventListener('click', () => {
         modoExibicao = 'lista';
         btnLista.classList.add('active');
@@ -169,29 +220,56 @@ function bindEvents(switchView) {
         if (containerProdutos) containerProdutos.innerHTML = renderConteudoProdutos(produtosAtuais, 'lista');
     });
 
-    // Clique em qualquer Card ou Linha da Tabela troca para a view do produto
+    // Clique em qualquer Card ou Linha da Tabela abre o detalhe do produto carregado
     containerProdutos?.addEventListener('click', (e) => {
         const target = e.target.closest('.clickable-card, .clickable-row');
         if (target) {
             const prodId = target.getAttribute('data-id');
-            const produto = produtosExemplo.find(p => p.id === prodId);
+            const produto = todosProdutos.find(p => p.id === prodId || p.sku === prodId);
             if (produto && typeof switchView === 'function') {
                 switchView('detalhe-produto', produto);
             }
         }
     });
 
+    // Botão para navegar para a tela de Cadastro de Novo Produto
     btnNovo?.addEventListener('click', () => {
         if (typeof switchView === 'function') switchView('cadastro-produto');
     });
 
+    // Campo de Busca em Tempo Real
     searchInput?.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase().trim();
-        produtosAtuais = produtosExemplo.filter(p => 
+        produtosAtuais = todosProdutos.filter(p => 
             p.nome.toLowerCase().includes(term) ||
             p.sku.toLowerCase().includes(term) ||
             p.categoria.toLowerCase().includes(term)
         );
         if (containerProdutos) containerProdutos.innerHTML = renderConteudoProdutos(produtosAtuais, modoExibicao);
     });
+}
+
+// =================================================================
+// HELPERS FORMATADORES
+// =================================================================
+
+/**
+ * Converte valor decimal de horas (ex: 1.3 ou 1.5) para string formatada de fácil leitura (ex: "1h 18m" ou "1.3h")
+ */
+function formatarTempoExibicao(tempoHoras) {
+    if (!tempoHoras || isNaN(tempoHoras)) return "0h";
+
+    const num = Number(tempoHoras);
+    const hrs = Math.floor(num);
+    const mins = Math.round((num - hrs) * 60);
+
+    if (hrs > 0 && mins > 0) {
+        return `${hrs}h ${mins}m`;
+    } else if (hrs > 0) {
+        return `${hrs}h`;
+    } else if (mins > 0) {
+        return `${mins}m`;
+    }
+
+    return `${num.toFixed(1)}h`;
 }
