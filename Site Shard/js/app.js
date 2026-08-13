@@ -1,8 +1,13 @@
 // js/app.js
 
+import { carregarEstadoInicial } from './state.js';
 import { initCatalogo } from './views/catalogo.view.js';
 import { initDetalheProduto } from './views/detalhe-produto.view.js';
 import { initCadastroProduto } from './views/cadastro-produto.view.js';
+import { initInsumosCustos } from './views/insumos-custos.view.js';
+
+// ⚠️ COLE AQUI A URL DO SEU GOOGLE APPS SCRIPT
+const APPS_SCRIPT_URL = 'SUA_URL_DO_GOOGLE_APPS_SCRIPT_AQUI';
 
 /**
  * Remove a tela de carregamento (Splash Screen) e exibe a aplicação
@@ -12,11 +17,11 @@ function hideSplashScreen() {
     const appContainer = document.getElementById('app-container');
 
     if (splash) {
-        splash.classList.add('hidden');
         splash.style.opacity = '0';
         splash.style.visibility = 'hidden';
         splash.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
         setTimeout(() => {
+            splash.classList.add('hidden');
             splash.style.display = 'none';
         }, 300);
     }
@@ -31,7 +36,7 @@ function hideSplashScreen() {
 
 /**
  * Roteador principal de troca de views do ERP
- * @param {string} targetViewId - Identificador da view (ex: 'catalogo', 'detalhe-produto', 'cadastro-produto')
+ * @param {string} targetViewId - Identificador da view (ex: 'catalogo', 'detalhe-produto', 'cadastro-produto', 'insumos')
  * @param {Object|null} data - Dados opcionais para a view de destino
  */
 export function switchView(targetViewId, data = null) {
@@ -51,10 +56,10 @@ export function switchView(targetViewId, data = null) {
         console.warn(`[Router] Container #view-${targetViewId} não encontrado no DOM.`);
     }
 
-    // 3. Atualiza a seleção no menu lateral (se a view pertencer à sidebar)
+    // 3. Atualiza a seleção no menu lateral
     updateSidebarActive(targetViewId);
 
-    // 4. Inicializa o módulo correspondente
+    // 4. Inicializa o módulo correspondente (que agora lerá do AppState instantaneamente)
     switch (targetViewId) {
         case 'catalogo':
             initCatalogo(switchView);
@@ -74,6 +79,9 @@ export function switchView(targetViewId, data = null) {
             break;
 
         case 'insumos':
+            initInsumosCustos(switchView);
+            break;
+
         case 'frota-maquinas':
         case 'fila-producao':
         case 'financeiro':
@@ -86,7 +94,7 @@ export function switchView(targetViewId, data = null) {
             break;
     }
 
-    // 5. Renderiza ícones se o Lucide estiver em uso
+    // 5. Renderiza ícones do Lucide (se aplicável)
     if (window.lucide) {
         window.lucide.createIcons();
     }
@@ -144,7 +152,6 @@ function renderPlaceholderView(viewId) {
     const container = document.querySelector(`#view-${viewId} .view-body`) || document.querySelector(`#view-${viewId}`);
     if (container) {
         const titles = {
-            'insumos': 'Insumos & Matéria-Prima',
             'frota-maquinas': 'Frota & Máquinas',
             'fila-producao': 'Fila de Produção',
             'financeiro': 'Financeiro',
@@ -159,17 +166,28 @@ function renderPlaceholderView(viewId) {
     }
 }
 
-function iniciarAplicacao() {
+/**
+ * Fluxo Principal de Inicialização da Aplicação
+ */
+async function iniciarAplicacao() {
     setupSidebarNavigation();
-    hideSplashScreen();
-    switchView('catalogo');
+
+    try {
+        // 1. Busca todos os dados do Google Sheets durante a Splash Screen
+        await carregarEstadoInicial(APPS_SCRIPT_URL);
+    } catch (erro) {
+        console.error('[Init] Erro ao conectar com o servidor:', erro);
+        alert('Não foi possível carregar os dados atualizados. O sistema iniciará com dados locais/vazios.');
+    } finally {
+        // 2. Esconde a Splash Screen e carrega a tela inicial (Catálogo)
+        hideSplashScreen();
+        switchView('catalogo');
+    }
 }
 
+// Inicializa a aplicação assim que o DOM estiver pronto
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', iniciarAplicacao);
 } else {
     iniciarAplicacao();
 }
-
-window.addEventListener('load', hideSplashScreen);
-setTimeout(hideSplashScreen, 5000);

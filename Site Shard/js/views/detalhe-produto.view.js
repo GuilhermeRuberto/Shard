@@ -69,7 +69,7 @@ export function initDetalheProduto(produto, switchView) {
                     </div>
                     <div class="metric-card">
                         <span class="label">Peso Estimado</span>
-                        <span class="value">${peso.toFixed(1).replace('.', ',')} g</span>
+                        <span class="value">${peso.toFixed(1).replace('.', ',')} kg</span>
                     </div>
                     <div class="metric-card">
                         <span class="label">Estoque Físico</span>

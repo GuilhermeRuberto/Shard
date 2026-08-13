@@ -223,18 +223,15 @@ function configurarControlesTempo() {
 
     if (!tempoInput) return;
 
-    // Aumentar/Diminuir via botões laterais
     btnUp?.addEventListener('click', () => alterarValorTempo(tempoInput, 1));
     btnDown?.addEventListener('click', () => alterarValorTempo(tempoInput, -1));
 
-    // Aumentar/Diminuir via Scroll do Mouse sobre o input
     tempoInput.addEventListener('wheel', (e) => {
         e.preventDefault();
         const direcao = e.deltaY < 0 ? 1 : -1;
         alterarValorTempo(tempoInput, direcao);
     });
 
-    // Aumentar/Diminuir via Teclas de Seta
     tempoInput.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowUp') {
             e.preventDefault();
@@ -249,13 +246,11 @@ function configurarControlesTempo() {
 function alterarValorTempo(input, direcao) {
     let val = input.value.trim();
 
-    // Se estiver vazio, inicia do 0.0
     if (!val) {
         val = "0.0";
     }
 
     if (val.includes(':')) {
-        // Formato HH:MM -> Incrementa/Decrementa de 10 em 10 minutos
         let partes = val.split(':');
         let h = parseInt(partes[0], 10) || 0;
         let m = parseInt(partes[1], 10) || 0;
@@ -277,16 +272,13 @@ function alterarValorTempo(input, direcao) {
         const mStr = String(m).padStart(2, '0');
         input.value = `${hStr}:${mStr}`;
     } else {
-        // Formato Base 10 (Decimal) -> Incrementa/Decrementa de 0.1 em 0.1
         let num = parseFloat(val.replace(',', '.')) || 0;
         num += direcao * 0.1;
         if (num < 0) num = 0;
         
-        // Fixa em 1 casa decimal para evitar ruídos de ponto flutuante em JS
         input.value = num.toFixed(1);
     }
 
-    // Dispara evento para atualizar os cálculos
     input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
@@ -329,7 +321,7 @@ async function carregarDadosDoSheets() {
                 if (!id) return;
 
                 const nome = String(item.nome || "").trim();
-                const categoria = String(item.categoria || "Insumos").trim() || "Insumos";
+                const categoria = String(item.categoria || "INSUMOS").trim().toUpperCase();
                 const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0) || 0;
                 const estoqueQuantidade = Number(item.estoque ?? 0) || 0;
 
@@ -347,7 +339,7 @@ async function carregarDadosDoSheets() {
                 if (!id) return;
 
                 const nome = String(item.nome || "").trim();
-                const categoria = String(item.categoria || "Custos").trim() || "Custos";
+                const categoria = String(item.categoria || "CUSTOS").trim().toUpperCase();
                 const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0) || 0;
                 const unidade = String(item.unidade || "").trim();
 
@@ -444,8 +436,10 @@ function adicionarLinhaBOM() {
         return;
     }
 
-    const itensDisponiveis = [...LISTA_INSUMOS, ...LISTA_CUSTOS];
-    const tiposUnicos = [...new Set(itensDisponiveis.map(item => item.categoria || item.tipo))];
+    // Apenas insumos vindos da tabela Estoque de Insumos
+    const itensDisponiveis = LISTA_INSUMOS;
+    const tiposUnicos = [...new Set(itensDisponiveis.map(item => String(item.categoria || "INSUMOS").toUpperCase()))];
+    
     let optionsTipo = '<option value="">Selecione...</option>';
     tiposUnicos.forEach(tipo => {
         if (tipo) optionsTipo += `<option value="${tipo}">${tipo}</option>`;
@@ -488,8 +482,10 @@ function atualizarDropdownInsumos(selectTipo) {
 
     inputQtd.placeholder = tipoSelecionado.toLowerCase().includes("filamento") ? "Ex: 150 (gramas)" : "Ex: 1 ou 4 (unidades)";
 
-    const itensDisponiveis = [...LISTA_INSUMOS, ...LISTA_CUSTOS];
-    const itensFiltrados = itensDisponiveis.filter(item => (item.categoria || item.tipo) === tipoSelecionado);
+    // Apenas insumos da lista de Estoque
+    const itensDisponiveis = LISTA_INSUMOS;
+    const itensFiltrados = itensDisponiveis.filter(item => String(item.categoria || "").toUpperCase() === tipoSelecionado.toUpperCase());
+    
     itensFiltrados.forEach(item => {
         const option = document.createElement("option");
         option.value = item.id;
@@ -521,19 +517,11 @@ function toggleDetalhesCusto() {
     }
 }
 
-/**
- * Converte entradas '1:30' (HH:MM) ou '1.3' / '1,3' (Base 10) em Horas Decimais
- */
-/**
- * Converte entradas '1:30' (HH:MM) ou '1.3' / '1,3' (Base 10) em Horas Decimais
- */
 function extrairHorasDecimais(inputTempo) {
     if (!inputTempo) return 0;
     
-    // Normaliza a string removendo espaços e substituindo vírgula por ponto
     let texto = String(inputTempo).trim().replace(',', '.');
 
-    // Se contiver ':', trata como formato de relógio HH:MM ou HH:MM:SS
     if (texto.includes(':')) {
         const partes = texto.split(':');
         const horas = parseFloat(partes[0]) || 0;
@@ -543,7 +531,6 @@ function extrairHorasDecimais(inputTempo) {
         return horas + (minutos / 60) + (segundos / 3600);
     }
 
-    // Se for número direto em base 10 (ex: 1.3 ou 1.1)
     const valorDecimal = parseFloat(texto);
     return isNaN(valorDecimal) ? 0 : valorDecimal;
 }
@@ -643,9 +630,9 @@ async function salvarProduto(event) {
                     quantidadeFinal = Number(pesoKg.toFixed(4));
                 }
 
-                const item = [...LISTA_INSUMOS, ...LISTA_CUSTOS].find(i => i.id === itemId);
+                const item = LISTA_INSUMOS.find(i => i.id === itemId);
                 const nomeItem = item ? item.nome : (selectInsumo.options[selectInsumo.selectedIndex]?.text || itemId);
-                const categoriaItem = item ? item.categoria : categoria || "GERAL";
+                const categoriaItem = String(item ? item.categoria : categoria || "INSUMOS").toUpperCase();
                 const precoUnit = parseFloat(selectInsumo.options[selectInsumo.selectedIndex]?.dataset?.preco) || (item ? item.precoUnidade : 0);
 
                 custoMateriais += (quantidadeFinal * precoUnit);
@@ -664,7 +651,7 @@ async function salvarProduto(event) {
             categoria: document.getElementById("categoria")?.value || "Geral",
             foto: document.getElementById("foto")?.value || "",
             arquivo: document.getElementById("arquivo")?.value || "",
-            tempoImpressao: Number(horasTotal.toFixed(2)), // Salva diretamente como número em base 10 (ex: 1.3 ou 1.5)
+            tempoImpressao: Number(horasTotal.toFixed(2)),
             pesoProd: Number(pesoFilamentosKg.toFixed(3))
         };
 
@@ -676,17 +663,18 @@ async function salvarProduto(event) {
         const custoDepreciacao = horasParaSalvar * depHora;
         const custoManutencao = horasParaSalvar * manHora;
 
+        // Injeta automaticamente as taxas em CAIXA ALTA
         if (kwhConsumido > 0) {
-            bom.push({ idCus: "CUS_01", tipo: "Energia", nome: TAXAS_SISTEMA["CUS_01"]?.nome || "ENERGIA Tarifa kWh", quantidade: kwhConsumido });
+            bom.push({ idCus: "CUS_01", tipo: "ENERGIA", nome: TAXAS_SISTEMA["CUS_01"]?.nome || "ENERGIA Tarifa kWh", quantidade: kwhConsumido });
         }
         if (horasParaSalvar > 0) {
-            bom.push({ idCus: "CUS_02", tipo: "Operação", nome: TAXAS_SISTEMA["CUS_02"]?.nome || "OPERAÇÃO MÉD DEPREC P/HORA", quantidade: horasParaSalvar });
-            bom.push({ idCus: "CUS_03", tipo: "Operação", nome: TAXAS_SISTEMA["CUS_03"]?.nome || "OPERAÇÃO MÉD MANUT P/HORA", quantidade: horasParaSalvar });
+            bom.push({ idCus: "CUS_02", tipo: "OPERAÇÃO", nome: TAXAS_SISTEMA["CUS_02"]?.nome || "OPERAÇÃO MÉD DEPREC P/HORA", quantidade: horasParaSalvar });
+            bom.push({ idCus: "CUS_03", tipo: "OPERAÇÃO", nome: TAXAS_SISTEMA["CUS_03"]?.nome || "OPERAÇÃO MÉD MANUT P/HORA", quantidade: horasParaSalvar });
         }
 
         const subtotalDireto = Number((custoMateriais + custoEnergia + custoDepreciacao + custoManutencao).toFixed(2));
         if (TAXAS_SISTEMA["CUS_04"] && subtotalDireto > 0) {
-            bom.push({ idCus: "CUS_04", tipo: "Margem", nome: TAXAS_SISTEMA["CUS_04"]?.nome || "Margem de Seguridade", quantidade: subtotalDireto });
+            bom.push({ idCus: "CUS_04", tipo: "MARGEM", nome: TAXAS_SISTEMA["CUS_04"]?.nome || "Margem de Seguridade", quantidade: subtotalDireto });
         }
 
         const payload = { produto, bom };
