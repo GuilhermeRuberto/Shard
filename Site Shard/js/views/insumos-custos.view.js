@@ -2,15 +2,47 @@
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzus-0gell47fkLEfgwHsLd8v1QoG6k_0Qi5fmUyhG_Q2NYjFwCYm5NNKXcQKRyFDA1Vw/exec";
 
+// =================================================================
+// UTILITÁRIOS, SANITIZAÇÃO E FORMATADORES
+// =================================================================
+
+/** Sanitiza strings para prevenção de vulnerabilidades XSS */
+function escapeHtml(str) {
+    if (typeof str !== 'string') return str ?? '';
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val) || 0);
+const formatPercent = (val) => new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(val) || 0);
+const formatNumber = (val, decimals = 2) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(Number(val) || 0);
+
+function refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
+}
+
+// Estado global mantido no escopo do módulo
 let abaAtiva = 'insumos'; // 'insumos' | 'custos'
 let listaInsumos = [];
 let listaCustos = [];
 let carregando = false;
-
-// Guarda o ID do item em edição no momento (null se nenhum)
 let itemEmEdicaoId = null;
 let ehNovoItem = false;
 
+// =================================================================
+// 1. INICIALIZAÇÃO DA VIEW
+// =================================================================
+
+/**
+ * Ponto de entrada da view de Insumos e Taxas Operacionais.
+ * @param {Function} switchView - Função global de navegação de views.
+ */
 export function initInsumosCustos(switchView) {
     const container = document.querySelector('#view-insumos .view-body') || document.querySelector('.main-content');
     if (!container) return;
@@ -19,12 +51,27 @@ export function initInsumosCustos(switchView) {
     itemEmEdicaoId = null;
     ehNovoItem = false;
 
-    // 1. Renderização do HTML base
-    container.innerHTML = `
+    // Renderização do HTML base
+    container.innerHTML = renderLayoutBaseHTML();
+    refreshIcons();
+
+    // Registra os ouvintes globais de eventos
+    bindGlobalEvents(container);
+
+    // Carrega dados da planilha via API
+    carregarDados();
+}
+
+// =================================================================
+// 2. TEMPLATES BASE DE LAYOUT
+// =================================================================
+
+function renderLayoutBaseHTML() {
+    return `
         <div class="view-header-flex">
             <div>
                 <h2>Gestão de Insumos & Taxas Operacionais</h2>
-                <p class="subtitle">Dê dois cliques sobre uma linha para editar ou adicione novos itens abaixo</p>
+                <p class="subtitle">Dê duplo clique sobre uma linha para editar ou adicione novos itens abaixo</p>
             </div>
             
             <div class="tabs-toggle-container">
@@ -53,44 +100,38 @@ export function initInsumosCustos(switchView) {
                 </table>
             </div>
             
-            <!-- Botão de Adicionar Nova Linha no Rodapé -->
             <button id="btn-adicionar-registro" class="btn-add-row">
                 <i data-lucide="plus-circle"></i> <span id="text-btn-add">Adicionar Insumo</span>
             </button>
         </div>
     `;
+}
 
-    if (window.lucide) window.lucide.createIcons();
+function bindGlobalEvents(container) {
+    container.querySelector('#btn-tab-insumos')?.addEventListener('click', () => alternarAba('insumos'));
+    container.querySelector('#btn-tab-custos')?.addEventListener('click', () => alternarAba('custos'));
+    container.querySelector('#input-busca')?.addEventListener('input', () => renderizarTabelaAtual());
+    container.querySelector('#btn-adicionar-registro')?.addEventListener('click', iniciarCriacaoNovoItem);
 
-    // 2. Binding dos Eventos
-    document.getElementById('btn-tab-insumos')?.addEventListener('click', () => alternarAba('insumos'));
-    document.getElementById('btn-tab-custos')?.addEventListener('click', () => alternarAba('custos'));
-    document.getElementById('input-busca')?.addEventListener('input', () => renderizarTabelaAtual());
-    document.getElementById('btn-adicionar-registro')?.addEventListener('click', iniciarCriacaoNovoItem);
-
-    // Evento de Duplo Clique para Editar a Linha
-    const tbody = document.getElementById('tabela-body');
+    // Duplo clique na linha para iniciar edição
+    const tbody = container.querySelector('#tabela-body');
     tbody?.addEventListener('dblclick', (e) => {
         const tr = e.target.closest('tr[data-id]');
-        if (tr && !itemEmEdicaoId) {
+        if (tr && !itemEmEdicaoId && !carregando) {
             iniciarEdicao(tr.dataset.id);
         }
     });
-
-    // 3. Carregar Dados
-    carregarDados();
 }
 
 // =================================================================
-// ANIMAÇÃO E TROCA DE ABAS
+// 3. NAVEGAÇÃO ENTRE ABAS
 // =================================================================
 
 function alternarAba(novaAba) {
     if (abaAtiva === novaAba || carregando) return;
 
     abaAtiva = novaAba;
-    itemEmEdicaoId = null;
-    ehNovoItem = false;
+    cancelarEdicao();
 
     const btnInsumos = document.getElementById('btn-tab-insumos');
     const btnCustos = document.getElementById('btn-tab-custos');
@@ -121,7 +162,7 @@ function alternarAba(novaAba) {
 }
 
 // =================================================================
-// REQUISIÇÃO DE DADOS DO BACKEND
+// 4. INTEGRAÇÃO E CARREGAMENTO DE DADOS (API)
 // =================================================================
 
 async function carregarDados() {
@@ -130,14 +171,19 @@ async function carregarDados() {
 
     try {
         const response = await fetch(APPS_SCRIPT_URL);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const result = await response.json();
 
-        if (result.status === "success") {
+        if (result && result.status === "success") {
             listaInsumos = Array.isArray(result.insumos) ? result.insumos : [];
             listaCustos = Array.isArray(result.custos) ? result.custos : [];
+        } else {
+            throw new Error("Resposta inválida da API do Apps Script");
         }
     } catch (error) {
-        console.error("Erro ao conectar com o Google Sheets:", error);
+        console.error("Erro ao conectar com a planilha:", error);
+        exibirMensagemErro("Não foi possível carregar os dados. Verifique a conexão.");
     } finally {
         carregando = false;
         renderizarTabelaAtual();
@@ -154,12 +200,26 @@ function exibirLoader() {
                 </td>
             </tr>
         `;
-        if (window.lucide) window.lucide.createIcons();
+        refreshIcons();
+    }
+}
+
+function exibirMensagemErro(mensagem) {
+    const tbody = document.getElementById('tabela-body');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="table-state-message text-danger" style="color: var(--danger-color, #ef4444);">
+                    <i data-lucide="alert-circle"></i> ${escapeHtml(mensagem)}
+                </td>
+            </tr>
+        `;
+        refreshIcons();
     }
 }
 
 // =================================================================
-// RENDERIZAÇÃO E EDIÇÃO EM LINHA
+// 5. RENDERIZAÇÃO DE TABELAS E LINHAS
 // =================================================================
 
 function renderizarTabelaAtual() {
@@ -168,19 +228,19 @@ function renderizarTabelaAtual() {
     const inputBusca = document.getElementById('input-busca');
     const badgeCounter = document.getElementById('counter-total');
 
-    if (!thead || !tbody) return;
+    if (!thead || !tbody || carregando) return;
 
     const termoBusca = (inputBusca?.value || '').toLowerCase().trim();
 
     if (abaAtiva === 'insumos') {
         thead.innerHTML = `
             <tr>
-                <th style="width: 50px; text-align: center;">Ação</th>
+                <th style="width: 80px; text-align: center;">Ação</th>
                 <th>ID INS</th>
                 <th>Categoria</th>
                 <th>Nome do Insumo</th>
-                <th>Custo Unitário / Preço (R$)</th>
-                <th>Estoque Atual (kg / un)</th>
+                <th>Custo Unitário (R$)</th>
+                <th>Estoque Atual</th>
             </tr>
         `;
 
@@ -199,15 +259,11 @@ function renderizarTabelaAtual() {
         }
 
         let htmlRows = dadosFiltrados.map(item => {
-            if (itemEmEdicaoId === item.id) {
-                return renderizarLinhaEdicaoInsumo(item);
-            }
-            return renderizarLinhaNormalInsumo(item);
+            return itemEmEdicaoId === item.id ? renderLinhaEdicaoInsumo(item) : renderLinhaNormalInsumo(item);
         }).join('');
 
-        // CORREÇÃO: Renderiza a nova linha com o ID numérico gerado
         if (ehNovoItem && itemEmEdicaoId && itemEmEdicaoId.startsWith('INS_')) {
-            htmlRows += renderizarLinhaEdicaoInsumo({
+            htmlRows += renderLinhaEdicaoInsumo({
                 id: itemEmEdicaoId,
                 categoria: 'FILAMENTO',
                 nome: '',
@@ -221,7 +277,7 @@ function renderizarTabelaAtual() {
     } else {
         thead.innerHTML = `
             <tr>
-                <th style="width: 50px; text-align: center;">Ação</th>
+                <th style="width: 80px; text-align: center;">Ação</th>
                 <th>ID CUS</th>
                 <th>Categoria</th>
                 <th>Nome / Descrição</th>
@@ -245,15 +301,11 @@ function renderizarTabelaAtual() {
         }
 
         let htmlRows = dadosFiltrados.map(item => {
-            if (itemEmEdicaoId === item.id) {
-                return renderizarLinhaEdicaoCusto(item);
-            }
-            return renderizarLinhaNormalCusto(item);
+            return itemEmEdicaoId === item.id ? renderLinhaEdicaoCusto(item) : renderLinhaNormalCusto(item);
         }).join('');
 
-        // CORREÇÃO: Renderiza a nova linha com o ID numérico gerado
         if (ehNovoItem && itemEmEdicaoId && itemEmEdicaoId.startsWith('CUS_')) {
-            htmlRows += renderizarLinhaEdicaoCusto({
+            htmlRows += renderLinhaEdicaoCusto({
                 id: itemEmEdicaoId,
                 categoria: 'CUSTOS OPERACIONAIS',
                 nome: '',
@@ -265,95 +317,109 @@ function renderizarTabelaAtual() {
         tbody.innerHTML = htmlRows;
     }
 
-    vincularEventosBotoesSalvar();
-    if (window.lucide) window.lucide.createIcons();
+    vincularEventosLinhaEdicao();
+    refreshIcons();
 }
 
-// --- LINHAS VISUAIS (NORMAL vs EDIÇÃO) ---
+// --- LINHAS DA TABELA DE INSUMOS ---
 
-function renderizarLinhaNormalInsumo(item) {
+function renderLinhaNormalInsumo(item) {
     const preco = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0);
     const estoque = Number(item.estoque ?? 0);
     const cat = String(item.categoria || 'INSUMOS').toUpperCase();
-    
-    const unidadeTexto = cat.includes('FILAMENTO') ? `${estoque} kg` : `${estoque} un`;
+
+    const unidadeTexto = cat.includes('FILAMENTO') ? `${formatNumber(estoque, 2)} kg` : `${formatNumber(estoque, 0)} un`;
     const badgeEstoqueClass = estoque <= 0 ? 'stock-badge empty' : estoque < 100 ? 'stock-badge low' : 'stock-badge ok';
 
     return `
-        <tr data-id="${item.id}" class="row-editable" title="Dê duplo clique para editar">
+        <tr data-id="${escapeHtml(item.id)}" class="row-editable" title="Dê duplo clique para editar">
             <td style="text-align: center;"><span class="action-placeholder"><i data-lucide="edit-2"></i></span></td>
-            <td><code class="code-id">${item.id || 'N/A'}</code></td>
-            <td><span class="badge-categoria">${cat}</span></td>
-            <td><strong>${item.nome || 'Sem Nome'}</strong></td>
-            <td>R$ ${preco.toFixed(2).replace('.', ',')}</td>
+            <td><code class="code-id">${escapeHtml(item.id || 'N/A')}</code></td>
+            <td><span class="badge-categoria">${escapeHtml(cat)}</span></td>
+            <td><strong>${escapeHtml(item.nome || 'Sem Nome')}</strong></td>
+            <td>${formatCurrency(preco)}</td>
             <td><span class="${badgeEstoqueClass}">${unidadeTexto}</span></td>
         </tr>
     `;
 }
 
-function renderizarLinhaEdicaoInsumo(item) {
+function renderLinhaEdicaoInsumo(item) {
     const preco = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0);
     const estoque = Number(item.estoque ?? 0);
+    const itemIdEscaped = escapeHtml(item.id);
 
     return `
-        <tr data-id="${item.id}" class="row-editing">
+        <tr data-id="${itemIdEscaped}" class="row-editing">
             <td style="text-align: center;">
-                <button class="btn-save-row" data-action="salvar" title="Salvar Alterações">
-                    <i data-lucide="check"></i>
-                </button>
+                <div class="row-actions-group">
+                    <button class="btn-save-row" data-action="salvar" title="Salvar (Enter)">
+                        <i data-lucide="check"></i>
+                    </button>
+                    <button class="btn-cancel-row" data-action="cancelar" title="Cancelar (Esc)">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
             </td>
-            <td><code class="code-id">${item.id}</code></td>
-            <td><input type="text" id="edit-cat-${item.id}" class="table-input" value="${item.categoria || ''}" placeholder="Ex: FILAMENTO"></td>
-            <td><input type="text" id="edit-nome-${item.id}" class="table-input" value="${item.nome || ''}" placeholder="Nome do insumo"></td>
-            <td><input type="number" step="0.01" id="edit-preco-${item.id}" class="table-input" value="${preco}" placeholder="0.00"></td>
-            <td><input type="number" step="0.01" id="edit-estoque-${item.id}" class="table-input" value="${estoque}" placeholder="0"></td>
+            <td><code class="code-id">${itemIdEscaped}</code></td>
+            <td><input type="text" id="edit-cat-${itemIdEscaped}" class="table-input" value="${escapeHtml(item.categoria || '')}" placeholder="Ex: FILAMENTO"></td>
+            <td><input type="text" id="edit-nome-${itemIdEscaped}" class="table-input" value="${escapeHtml(item.nome || '')}" placeholder="Nome do insumo"></td>
+            <td><input type="number" step="0.01" id="edit-preco-${itemIdEscaped}" class="table-input" value="${preco}" placeholder="0.00"></td>
+            <td><input type="number" step="0.01" id="edit-estoque-${itemIdEscaped}" class="table-input" value="${estoque}" placeholder="0"></td>
         </tr>
     `;
 }
 
-function renderizarLinhaNormalCusto(item) {
+// --- LINHAS DA TABELA DE CUSTOS ---
+
+function renderLinhaNormalCusto(item) {
     const valor = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0);
     const unidade = String(item.unidade || '').trim();
     const cat = String(item.categoria || 'CUSTOS').toUpperCase();
 
-    let valorFormatado = `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    let valorFormatado = formatCurrency(valor);
     if (unidade.includes('%') || item.id === 'CUS_04') {
-        valorFormatado = `${(valor * 100).toFixed(2).replace('.', ',')}%`;
+        valorFormatado = formatPercent(valor);
     }
 
     return `
-        <tr data-id="${item.id}" class="row-editable" title="Dê duplo clique para editar">
+        <tr data-id="${escapeHtml(item.id)}" class="row-editable" title="Dê duplo clique para editar">
             <td style="text-align: center;"><span class="action-placeholder"><i data-lucide="edit-2"></i></span></td>
-            <td><code class="code-id highlight">${item.id || 'N/A'}</code></td>
-            <td><span class="badge-categoria alt">${cat}</span></td>
-            <td><strong>${item.nome || 'Sem Nome'}</strong></td>
-            <td><span class="badge-unidade">${unidade || 'R$'}</span></td>
+            <td><code class="code-id highlight">${escapeHtml(item.id || 'N/A')}</code></td>
+            <td><span class="badge-categoria alt">${escapeHtml(cat)}</span></td>
+            <td><strong>${escapeHtml(item.nome || 'Sem Nome')}</strong></td>
+            <td><span class="badge-unidade">${escapeHtml(unidade || 'R$')}</span></td>
             <td><strong class="text-accent">${valorFormatado}</strong></td>
         </tr>
     `;
 }
 
-function renderizarLinhaEdicaoCusto(item) {
+function renderLinhaEdicaoCusto(item) {
     const valor = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0);
+    const itemIdEscaped = escapeHtml(item.id);
 
     return `
-        <tr data-id="${item.id}" class="row-editing">
+        <tr data-id="${itemIdEscaped}" class="row-editing">
             <td style="text-align: center;">
-                <button class="btn-save-row" data-action="salvar" title="Salvar Alterações">
-                    <i data-lucide="check"></i>
-                </button>
+                <div class="row-actions-group">
+                    <button class="btn-save-row" data-action="salvar" title="Salvar (Enter)">
+                        <i data-lucide="check"></i>
+                    </button>
+                    <button class="btn-cancel-row" data-action="cancelar" title="Cancelar (Esc)">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
             </td>
-            <td><code class="code-id highlight">${item.id}</code></td>
-            <td><input type="text" id="edit-cat-${item.id}" class="table-input" value="${item.categoria || ''}" placeholder="Ex: TAXAS"></td>
-            <td><input type="text" id="edit-nome-${item.id}" class="table-input" value="${item.nome || ''}" placeholder="Descrição"></td>
-            <td><input type="text" id="edit-unidade-${item.id}" class="table-input" value="${item.unidade || ''}" placeholder="Ex: R$/kWh ou %"></td>
-            <td><input type="number" step="0.0001" id="edit-preco-${item.id}" class="table-input" value="${valor}" placeholder="0.00"></td>
+            <td><code class="code-id highlight">${itemIdEscaped}</code></td>
+            <td><input type="text" id="edit-cat-${itemIdEscaped}" class="table-input" value="${escapeHtml(item.categoria || '')}" placeholder="Ex: TAXAS"></td>
+            <td><input type="text" id="edit-nome-${itemIdEscaped}" class="table-input" value="${escapeHtml(item.nome || '')}" placeholder="Descrição"></td>
+            <td><input type="text" id="edit-unidade-${itemIdEscaped}" class="table-input" value="${escapeHtml(item.unidade || '')}" placeholder="Ex: R$/kWh ou %"></td>
+            <td><input type="number" step="0.0001" id="edit-preco-${itemIdEscaped}" class="table-input" value="${valor}" placeholder="0.00"></td>
         </tr>
     `;
 }
 
 // =================================================================
-// AÇÕES DE EDIÇÃO, CRIAÇÃO E SALVAMENTO
+// 6. EDIÇÃO E SALVAMENTO (WORKFLOWS)
 // =================================================================
 
 function iniciarEdicao(id) {
@@ -361,29 +427,67 @@ function iniciarEdicao(id) {
     renderizarTabelaAtual();
 }
 
+/**
+ * Gera um ID sequencial seguro baseado nos itens existentes na lista ativa.
+ */
+function gerarNovoIdSequencial(prefixo, lista) {
+    const numeros = lista
+        .map(i => parseInt(String(i.id || '').replace(/\D/g, ''), 10))
+        .filter(n => !isNaN(n));
+    
+    const maiorNum = numeros.length > 0 ? Math.max(...numeros) : 0;
+    return `${prefixo}_${String(maiorNum + 1).padStart(2, '0')}`;
+}
+
 function iniciarCriacaoNovoItem() {
-    if (itemEmEdicaoId) return; // Evita abrir múltipla edição
+    if (itemEmEdicaoId) return;
 
     ehNovoItem = true;
 
     if (abaAtiva === 'insumos') {
-        const proxNum = listaInsumos.length + 1;
-        itemEmEdicaoId = `INS_${String(proxNum).padStart(2, '0')}`;
+        itemEmEdicaoId = gerarNovoIdSequencial('INS', listaInsumos);
     } else {
-        const proxNum = listaCustos.length + 1;
-        itemEmEdicaoId = `CUS_${String(proxNum).padStart(2, '0')}`;
+        itemEmEdicaoId = gerarNovoIdSequencial('CUS', listaCustos);
     }
 
     renderizarTabelaAtual();
 }
 
-function vincularEventosBotoesSalvar() {
-    const btnSalvar = document.querySelector('.row-editing .btn-save-row');
-    if (!btnSalvar) return;
+function cancelarEdicao() {
+    itemEmEdicaoId = null;
+    ehNovoItem = false;
+    renderizarTabelaAtual();
+}
 
-    btnSalvar.addEventListener('click', async (e) => {
+function vincularEventosLinhaEdicao() {
+    const rowEditing = document.querySelector('.row-editing');
+    if (!rowEditing) return;
+
+    // Botão Salvar
+    const btnSalvar = rowEditing.querySelector('.btn-save-row');
+    btnSalvar?.addEventListener('click', async (e) => {
         e.preventDefault();
         await salvarRegistroAtual();
+    });
+
+    // Botão Cancelar
+    const btnCancelar = rowEditing.querySelector('.btn-cancel-row');
+    btnCancelar?.addEventListener('click', (e) => {
+        e.preventDefault();
+        cancelarEdicao();
+    });
+
+    // Atalhos de Teclado (Enter = Salvar, Escape = Cancelar)
+    rowEditing.querySelectorAll('input').forEach(input => {
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                await salvarRegistroAtual();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelarEdicao();
+            }
+        });
     });
 }
 
@@ -391,11 +495,15 @@ async function salvarRegistroAtual() {
     const id = itemEmEdicaoId;
     if (!id) return;
 
-    const btnSalvar = document.querySelector('.row-editing .btn-save-row');
+    const rowEditing = document.querySelector('.row-editing');
+    const btnSalvar = rowEditing?.querySelector('.btn-save-row');
+    const btnCancelar = rowEditing?.querySelector('.btn-cancel-row');
+
     if (btnSalvar) {
         btnSalvar.disabled = true;
+        if (btnCancelar) btnCancelar.disabled = true;
         btnSalvar.innerHTML = `<i data-lucide="loader-2" class="spin-icon"></i>`;
-        if (window.lucide) window.lucide.createIcons();
+        refreshIcons();
     }
 
     let payload = {};
@@ -423,14 +531,16 @@ async function salvarRegistroAtual() {
     }
 
     try {
-        // Envio com 'text/plain' para o Google Apps Script aceitar sem pré-voo CORS
-        await fetch(APPS_SCRIPT_URL, {
+        // Envio POST formatado como text/plain para evitar requisição CORS Preflight no Google Apps Script
+        const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
 
-        // Atualização Local
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+        // Atualização reativa do estado local
         if (abaAtiva === 'insumos') {
             const idx = listaInsumos.findIndex(item => item.id === id);
             if (idx >= 0) {
@@ -448,7 +558,8 @@ async function salvarRegistroAtual() {
         }
 
     } catch (error) {
-        console.error("Erro ao salvar no servidor Google Sheets:", error);
+        console.error("Erro ao salvar dados no Google Sheets:", error);
+        alert("Não foi possível salvar as alterações na planilha. Tente novamente.");
     } finally {
         itemEmEdicaoId = null;
         ehNovoItem = false;

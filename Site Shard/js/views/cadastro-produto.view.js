@@ -2,30 +2,63 @@
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzus-0gell47fkLEfgwHsLd8v1QoG6k_0Qi5fmUyhG_Q2NYjFwCYm5NNKXcQKRyFDA1Vw/exec";
 
-let TAXAS_SISTEMA = {};
-let PERFIS_ENERGIA = [];
-let LISTA_INSUMOS = [];
-let LISTA_CUSTOS = [];
-let dadosCarregados = false;
-let carregandoDados = false;
+let state = {
+    taxasSistema: {},
+    perfisEnergia: [],
+    listaInsumos: [],
+    listaCustos: [],
+    dadosCarregados: false,
+    carregandoDados: false
+};
+
+const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+const formatNumber = (val, decimals = 2) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(val || 0);
+
+// =================================================================
+// INICIALIZAÇÃO
+// =================================================================
 
 export function initCadastroProduto(switchView) {
     const container = document.querySelector('#view-cadastro-produto .view-body') || document.querySelector('.main-content');
     if (!container) return;
 
-    // 1. Renderização do HTML no Container da View
-    container.innerHTML = `
+    resetState();
+    container.innerHTML = renderHTML();
+
+    if (window.lucide) window.lucide.createIcons();
+
+    bindEvents(switchView);
+    carregarDadosDoSheets();
+}
+
+function resetState() {
+    state = {
+        taxasSistema: {},
+        perfisEnergia: [],
+        listaInsumos: [],
+        listaCustos: [],
+        dadosCarregados: false,
+        carregandoDados: false
+    };
+}
+
+// =================================================================
+// TEMPLATE HTML
+// =================================================================
+
+function renderHTML() {
+    return `
         <div class="detalhe-page-header">
             <button id="btn-voltar-catalogo" class="btn-secondary">
                 <i data-lucide="arrow-left"></i> Voltar ao Catálogo
             </button>
-            <h2>Cadastro de Produto & Ficha Técnica</h2>
+            <h2>Cadastro de Produto & Ficha Técnica (BOM)</h2>
         </div>
 
         <form id="productForm">
-            <!-- Card 1: Informações do Produto Pai -->
+            <!-- Card 1: Informações do Produto -->
             <div class="card">
-                <h3>Informações do Produto (Pai)</h3>
+                <h3>Informações do Produto</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="nome">Nome do Produto</label>
@@ -38,21 +71,22 @@ export function initCadastroProduto(switchView) {
                             <option value="Decoração">Decoração</option>
                             <option value="Utilitários">Utilitários</option>
                             <option value="Prototipagem">Prototipagem</option>
+                            <option value="Acessórios">Acessórios</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="tempo">Tempo Estimado (Horas / HH:MM)</label>
+                        <label for="tempo">Tempo Estimado (Horas ou HH:MM)</label>
                         <div class="tempo-input-wrapper" style="display: flex; align-items: center; gap: 4px;">
-                            <input type="text" id="tempo" placeholder="Ex: 1.3 ou 01:30" required style="flex: 1;" autocomplete="off">
+                            <input type="text" id="tempo" placeholder="Ex: 1.5 ou 01:30" required style="flex: 1;" autocomplete="off">
                             <div class="tempo-stepper-btn" style="display: flex; flex-direction: column; gap: 2px;">
-                                <button type="button" id="btn-tempo-up" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; line-height: 1;" title="Aumentar">▲</button>
-                                <button type="button" id="btn-tempo-down" class="btn-secondary" style="padding: 2px 6px; font-size: 10px; line-height: 1;" title="Diminuir">▼</button>
+                                <button type="button" id="btn-tempo-up" class="btn-secondary" style="padding: 2px 6px; font-size: 10px;" title="Aumentar">▲</button>
+                                <button type="button" id="btn-tempo-down" class="btn-secondary" style="padding: 2px 6px; font-size: 10px;" title="Diminuir">▼</button>
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="foto">URL da Foto</label>
-                        <input type="url" id="foto" placeholder="https://link-da-imagem.com">
+                        <input type="url" id="foto" placeholder="https://link-da-imagem.com/foto.jpg">
                     </div>
                     <div class="form-group full-width">
                         <label for="arquivo">Link do Arquivo 3D (3MF / G-Code / Drive)</label>
@@ -61,9 +95,9 @@ export function initCadastroProduto(switchView) {
                 </div>
             </div>
 
-            <!-- Card 2: Composição Técnica & BOM -->
+            <!-- Card 2: Lista de Materiais (BOM) & Operacional -->
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                     <h3>Composição Técnica & Insumos (BOM)</h3>
                     <button type="button" id="addInsumoBtn" class="btn-secondary">
                         <i data-lucide="plus"></i> Adicionar Insumo
@@ -75,20 +109,20 @@ export function initCadastroProduto(switchView) {
                         <thead>
                             <tr>
                                 <th>Tipo de Insumo</th>
-                                <th>Nome do Insumo</th>
+                                <th>Insumo / Material</th>
                                 <th>Quantidade (g/un)</th>
-                                <th>Ação</th>
+                                <th style="width: 50px;">Ação</th>
                             </tr>
                         </thead>
                         <tbody id="bomTbody">
-                            <!-- Linhas dinâmicas via JS -->
+                            <!-- Linhas inseridas dinamicamente -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Configuração de Energia & Valores do Banco -->
-                <div class="fixed-costs-card">
-                    <div class="fixed-costs-header">
+                <!-- Perfil de Energia & Taxas -->
+                <div class="fixed-costs-card" style="margin-top: 20px;">
+                    <div class="fixed-costs-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                         <i data-lucide="zap"></i> <span>Perfil Energético da Máquina</span>
                     </div>
                     <div class="fixed-costs-grid">
@@ -97,84 +131,57 @@ export function initCadastroProduto(switchView) {
                             <select id="perfilEnergia"></select>
                         </div>
 
-                        <!-- Taxas Fixas Operacionais -->
-                        <div class="rates-display-group">
-                            <div class="rate-badge">
-                                <span class="rate-title">Tarifa kWh (CUS_01)</span>
-                                <strong id="display-cus01">Carregando...</strong>
-                            </div>
-                            <div class="rate-badge">
-                                <span class="rate-title">Depreciação/h (CUS_02)</span>
-                                <strong id="display-cus02">Carregando...</strong>
-                            </div>
-                            <div class="rate-badge">
-                                <span class="rate-title">Manutenção/h (CUS_03)</span>
-                                <strong id="display-cus03">Carregando...</strong>
-                            </div>
-                            <div class="rate-badge">
-                                <span class="rate-title">Margem Erro (CUS_04)</span>
-                                <strong id="display-cus04">Carregando...</strong>
-                            </div>
+                        <div class="rates-display-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px;">
+                            <div class="rate-badge"><span class="rate-title">Tarifa kWh</span><strong id="display-cus01">--</strong></div>
+                            <div class="rate-badge"><span class="rate-title">Depreciação/h</span><strong id="display-cus02">--</strong></div>
+                            <div class="rate-badge"><span class="rate-title">Manutenção/h</span><strong id="display-cus03">--</strong></div>
+                            <div class="rate-badge"><span class="rate-title">Margem Erro</span><strong id="display-cus04">--</strong></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Resumo dos Totais -->
-                <div class="totals-summary-card">
-                    <div class="summary-compact">
-                        <div class="compact-item">
-                            <span class="label">Peso Total (Filamentos):</span>
-                            <strong id="pesoTotal" class="value">0.000 kg</strong>
+                <!-- Card de Resumo Financeiro -->
+                <div class="totals-summary-card" style="margin-top: 20px; background: #f8fafc; padding: 16px; border-radius: 8px;">
+                    <div class="summary-compact" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <span class="label">Peso Total Filamento:</span>
+                            <strong id="pesoTotal">0,000 kg</strong>
                         </div>
-                        <div class="compact-item highlight">
-                            <span class="label">Custo Total de Produção:</span>
-                            <strong id="custoTotal" class="value-highlight">R$ 0,00</strong>
+                        <div>
+                            <span class="label">Custo Estimado de Produção:</span>
+                            <strong id="custoTotal" style="font-size: 1.25rem; color: #16a34a;">R$ 0,00</strong>
                         </div>
-                        <button type="button" id="btnToggleDetalhes" class="btn-toggle-details">
-                            <span id="toggleText">+ Detalhes da Composição</span>
-                            <i data-lucide="chevron-down" id="toggleIcon"></i>
+                        <button type="button" id="btnToggleDetalhes" class="btn-secondary" style="font-size: 12px;">
+                            <span id="toggleText">+ Detalhes</span>
                         </button>
                     </div>
 
-                    <!-- Detalhamento Completo Expansível -->
-                    <div id="detalhesCusto" class="summary-details-panel hidden">
-                        <div class="details-grid">
-                            <div class="detail-row">
-                                <span>Material / Insumos Diretos:</span>
-                                <strong id="det-insumos">R$ 0,00</strong>
-                            </div>
-                            <div class="detail-row">
-                                <span>Consumo de Energia (<span id="det-kwh-val">0.00</span> kWh):</span>
-                                <strong id="det-energia">R$ 0,00</strong>
-                            </div>
-                            <div class="detail-row">
-                                <span>Depreciação de Máquina:</span>
-                                <strong id="det-depreciacao">R$ 0,00</strong>
-                            </div>
-                            <div class="detail-row">
-                                <span>Manutenção Preventiva:</span>
-                                <strong id="det-manutencao">R$ 0,00</strong>
-                            </div>
-                            <div class="detail-row error-margin">
-                                <span>Margem de Seguridade/Erro:</span>
-                                <strong id="det-margem">R$ 0,00</strong>
-                            </div>
+                    <div id="detalhesCusto" class="summary-details-panel hidden" style="margin-top: 12px; border-top: 1px solid #e2e8f0; pt-3;">
+                        <div class="details-grid" style="display: grid; gap: 6px; font-size: 13px; margin-top: 8px;">
+                            <div>Insumos Diretos: <strong id="det-insumos">R$ 0,00</strong></div>
+                            <div>Energia (<span id="det-kwh-val">0,00</span> kWh): <strong id="det-energia">R$ 0,00</strong></div>
+                            <div>Depreciação Máquina: <strong id="det-depreciacao">R$ 0,00</strong></div>
+                            <div>Manutenção Preventiva: <strong id="det-manutencao">R$ 0,00</strong></div>
+                            <div>Margem de Segurança: <strong id="det-margem">R$ 0,00</strong></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-actions" style="margin-top: 20px;">
-                    <button type="submit" class="btn-primary">
-                        <i data-lucide="save"></i> Salvar e Enviar para o Google Sheets
+                <div class="form-actions" style="margin-top: 24px;">
+                    <button type="submit" class="btn-primary" style="width: 100%;">
+                        <i data-lucide="save"></i> Salvar Produto no Google Sheets
                     </button>
                 </div>
             </div>
         </form>
     `;
+}
 
-    if (window.lucide) window.lucide.createIcons();
+// =================================================================
+// EVENTOS & CONTROLES
+// =================================================================
 
-    // 2. Registro de Eventos da View
+function bindEvents(switchView) {
     document.getElementById('btn-voltar-catalogo')?.addEventListener('click', () => switchView('catalogo'));
     document.getElementById('addInsumoBtn')?.addEventListener('click', adicionarLinhaBOM);
     document.getElementById('btnToggleDetalhes')?.addEventListener('click', toggleDetalhesCusto);
@@ -182,122 +189,64 @@ export function initCadastroProduto(switchView) {
     document.getElementById('perfilEnergia')?.addEventListener('change', calcularTotais);
     document.getElementById('productForm')?.addEventListener('submit', salvarProduto);
 
-    // Configuração dos Controles de Scroll e Setas para o Campo Tempo
     configurarControlesTempo();
 
-    // Delegação de eventos para as linhas dinâmicas da tabela BOM
     const bomTbody = document.getElementById('bomTbody');
-    bomTbody?.addEventListener('change', (e) => {
-        if (e.target.classList.contains('bom-tipo')) {
-            atualizarDropdownInsumos(e.target);
-        } else if (e.target.classList.contains('bom-insumo')) {
-            calcularTotais();
-        }
-    });
-
-    bomTbody?.addEventListener('input', (e) => {
-        if (e.target.classList.contains('bom-qtd')) {
-            calcularTotais();
-        }
-    });
-
-    bomTbody?.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-remover')) {
-            e.target.closest('tr').remove();
-            calcularTotais();
-        }
-    });
-
-    // 3. Carregar Insumos e Configurações do Sheets
-    carregarDadosDoSheets();
+    if (bomTbody) {
+        bomTbody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('bom-tipo')) atualizarDropdownInsumos(e.target);
+            else if (e.target.classList.contains('bom-insumo')) calcularTotais();
+        });
+        bomTbody.addEventListener('input', (e) => {
+            if (e.target.classList.contains('bom-qtd')) calcularTotais();
+        });
+        bomTbody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-remover') || e.target.closest('.btn-remover')) {
+                e.target.closest('tr').remove();
+                calcularTotais();
+            }
+        });
+    }
 }
-
-// =================================================================
-// LÓGICA DE CONTROLE DO CAMPO DE TEMPO (SCROLL, SETAS, PASSO 10)
-// =================================================================
 
 function configurarControlesTempo() {
     const tempoInput = document.getElementById('tempo');
-    const btnUp = document.getElementById('btn-tempo-up');
-    const btnDown = document.getElementById('btn-tempo-down');
-
     if (!tempoInput) return;
 
-    btnUp?.addEventListener('click', () => alterarValorTempo(tempoInput, 1));
-    btnDown?.addEventListener('click', () => alterarValorTempo(tempoInput, -1));
+    document.getElementById('btn-tempo-up')?.addEventListener('click', () => alterarValorTempo(tempoInput, 1));
+    document.getElementById('btn-tempo-down')?.addEventListener('click', () => alterarValorTempo(tempoInput, -1));
 
     tempoInput.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const direcao = e.deltaY < 0 ? 1 : -1;
-        alterarValorTempo(tempoInput, direcao);
-    });
-
-    tempoInput.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            alterarValorTempo(tempoInput, 1);
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            alterarValorTempo(tempoInput, -1);
-        }
+        alterarValorTempo(tempoInput, e.deltaY < 0 ? 1 : -1);
     });
 }
 
 function alterarValorTempo(input, direcao) {
-    let val = input.value.trim();
-
-    if (!val) {
-        val = "0.0";
-    }
-
+    let val = input.value.trim() || "0.0";
     if (val.includes(':')) {
         let partes = val.split(':');
         let h = parseInt(partes[0], 10) || 0;
         let m = parseInt(partes[1], 10) || 0;
-
         m += direcao * 10;
-        if (m >= 60) {
-            h += Math.floor(m / 60);
-            m = m % 60;
-        } else if (m < 0) {
-            let minsNegativos = Math.abs(m);
-            let horasAAbater = Math.ceil(minsNegativos / 60);
-            h -= horasAAbater;
-            m = (60 - (minsNegativos % 60)) % 60;
-        }
-
-        if (h < 0) { h = 0; m = 0; }
-
-        const hStr = String(h);
-        const mStr = String(m).padStart(2, '0');
-        input.value = `${hStr}:${mStr}`;
+        if (m >= 60) { h += Math.floor(m / 60); m %= 60; }
+        else if (m < 0) { h = Math.max(0, h - 1); m = 50; }
+        input.value = `${h}:${String(m).padStart(2, '0')}`;
     } else {
         let num = parseFloat(val.replace(',', '.')) || 0;
-        num += direcao * 0.1;
-        if (num < 0) num = 0;
-        
+        num = Math.max(0, num + (direcao * 0.1));
         input.value = num.toFixed(1);
     }
-
     input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 // =================================================================
-// LÓGICA DE NEGÓCIO E INTEGRAÇÃO GOOGLE SHEETS
+// INTEGRAÇÃO COM SHEETS (API)
 // =================================================================
 
 async function carregarDadosDoSheets() {
-    if (carregandoDados) return;
-    carregandoDados = true;
-
-    if (!APPS_SCRIPT_URL || !APPS_SCRIPT_URL.trim().startsWith("https://script.google.com")) {
-        exibirEstadoCarregando("Sem URL");
-        dadosCarregados = true;
-        carregandoDados = false;
-        if (document.getElementById("bomTbody")?.children.length === 0) adicionarLinhaBOM();
-        calcularTotais();
-        return;
-    }
+    if (state.carregandoDados) return;
+    state.carregandoDados = true;
 
     exibirEstadoCarregando("Carregando...");
     const controller = new AbortController();
@@ -308,66 +257,39 @@ async function carregarDadosDoSheets() {
         const result = await response.json();
 
         if (result.status === "success") {
-            TAXAS_SISTEMA = {};
-            PERFIS_ENERGIA = [];
-            LISTA_INSUMOS = [];
-            LISTA_CUSTOS = [];
+            state.taxasSistema = {};
+            state.perfisEnergia = [];
+            state.listaInsumos = [];
+            state.listaCustos = [];
 
-            const insumos = Array.isArray(result.insumos) ? result.insumos : [];
-            const custos = Array.isArray(result.custos) ? result.custos : [];
-
-            insumos.forEach(item => {
-                const id = String(item.id || "").trim();
-                if (!id) return;
-
-                const nome = String(item.nome || "").trim();
-                const categoria = String(item.categoria || "INSUMOS").trim().toUpperCase();
-                const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0) || 0;
-                const estoqueQuantidade = Number(item.estoque ?? 0) || 0;
-
-                LISTA_INSUMOS.push({
-                    id,
-                    nome,
-                    categoria,
-                    precoUnidade,
-                    estoque: estoqueQuantidade
+            (result.insumos || []).forEach(item => {
+                if (!item.id) return;
+                state.listaInsumos.push({
+                    id: String(item.id).trim(),
+                    nome: String(item.nome || "").trim(),
+                    categoria: String(item.categoria || "INSUMOS").trim().toUpperCase(),
+                    precoUnidade: Number(item.precoUnidade ?? item.precoUnit ?? 0) || 0,
+                    estoque: Number(item.estoque ?? 0) || 0
                 });
             });
 
-            custos.forEach(item => {
-                const id = String(item.id || "").trim();
-                if (!id) return;
-
-                const nome = String(item.nome || "").trim();
-                const categoria = String(item.categoria || "CUSTOS").trim().toUpperCase();
-                const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? item.preco ?? 0) || 0;
-                const unidade = String(item.unidade || "").trim();
-
-                LISTA_CUSTOS.push({
-                    id,
-                    nome,
-                    categoria,
-                    precoUnidade,
-                    unidade
-                });
+            (result.custos || []).forEach(item => {
+                if (!item.id) return;
+                const id = String(item.id).trim();
+                const precoUnidade = Number(item.precoUnidade ?? item.precoUnit ?? 0) || 0;
+                
+                state.listaCustos.push({ id, nome: item.nome, precoUnidade });
 
                 if (["CUS_01", "CUS_02", "CUS_03", "CUS_04"].includes(id)) {
-                    TAXAS_SISTEMA[id] = {
-                        nome: nome || `Taxa ${id}`,
-                        valor: precoUnidade
-                    };
+                    state.taxasSistema[id] = { nome: item.nome, valor: precoUnidade };
                 }
 
-                if (id.toUpperCase().startsWith("CUS_05") || id.toUpperCase().startsWith("CUS_06") || unidade.toUpperCase().endsWith("W") || nome.toUpperCase().includes("PE ")) {
-                    PERFIS_ENERGIA.push({
-                        idCus: id,
-                        nome: nome,
-                        watts: precoUnidade
-                    });
+                if (id.toUpperCase().startsWith("CUS_05") || id.toUpperCase().startsWith("CUS_06") || (item.unidade || "").endsWith("W")) {
+                    state.perfisEnergia.push({ idCus: id, nome: item.nome, watts: precoUnidade });
                 }
             });
 
-            dadosCarregados = true;
+            state.dadosCarregados = true;
             atualizarBadgesTaxas();
             atualizarSelectPerfilEnergia();
 
@@ -375,18 +297,19 @@ async function carregarDadosDoSheets() {
             if (tbody) tbody.innerHTML = "";
             adicionarLinhaBOM();
             calcularTotais();
-        } else {
-            exibirEstadoCarregando("Erro planilha");
         }
     } catch (error) {
-        exibirEstadoCarregando("Erro conexão");
-        dadosCarregados = true;
-        if (document.getElementById("bomTbody")?.children.length === 0) adicionarLinhaBOM();
-        calcularTotais();
+        exibirEstadoCarregando("Erro");
+        state.dadosCarregados = true;
+        garantirLinhaMinimaBOM();
     } finally {
         clearTimeout(timeoutId);
-        carregandoDados = false;
+        state.carregandoDados = false;
     }
+}
+
+function garantirLinhaMinimaBOM() {
+    if (document.getElementById("bomTbody")?.children.length === 0) adicionarLinhaBOM();
 }
 
 function exibirEstadoCarregando(texto) {
@@ -397,15 +320,11 @@ function exibirEstadoCarregando(texto) {
 }
 
 function atualizarBadgesTaxas() {
-    const el01 = document.getElementById("display-cus01");
-    const el02 = document.getElementById("display-cus02");
-    const el03 = document.getElementById("display-cus03");
-    const el04 = document.getElementById("display-cus04");
-
-    if (el01) el01.textContent = TAXAS_SISTEMA["CUS_01"] ? "R$ " + TAXAS_SISTEMA["CUS_01"].valor.toFixed(2).replace(".", ",") : "R$ 0,00";
-    if (el02) el02.textContent = TAXAS_SISTEMA["CUS_02"] ? "R$ " + TAXAS_SISTEMA["CUS_02"].valor.toFixed(2).replace(".", ",") : "R$ 0,00";
-    if (el03) el03.textContent = TAXAS_SISTEMA["CUS_03"] ? "R$ " + TAXAS_SISTEMA["CUS_03"].valor.toFixed(2).replace(".", ",") : "R$ 0,00";
-    if (el04) el04.textContent = TAXAS_SISTEMA["CUS_04"] ? (TAXAS_SISTEMA["CUS_04"].valor * 100).toFixed(2).replace(".", ",") + "%" : "0,00%";
+    const t = state.taxasSistema;
+    document.getElementById("display-cus01").textContent = formatCurrency(t["CUS_01"]?.valor);
+    document.getElementById("display-cus02").textContent = formatCurrency(t["CUS_02"]?.valor);
+    document.getElementById("display-cus03").textContent = formatCurrency(t["CUS_03"]?.valor);
+    document.getElementById("display-cus04").textContent = `${formatNumber((t["CUS_04"]?.valor || 0) * 100)}%`;
 }
 
 function atualizarSelectPerfilEnergia() {
@@ -413,12 +332,12 @@ function atualizarSelectPerfilEnergia() {
     if (!select) return;
 
     select.innerHTML = "";
-    if (PERFIS_ENERGIA.length === 0) {
+    if (state.perfisEnergia.length === 0) {
         select.innerHTML = '<option value="PERFIL_DEFAULT" data-watts="0">Perfil Padrão (0W)</option>';
         return;
     }
 
-    PERFIS_ENERGIA.forEach((perfil, index) => {
+    state.perfisEnergia.forEach((perfil, index) => {
         const option = document.createElement("option");
         option.value = perfil.idCus || `PERFIL_${index}`;
         option.textContent = `${option.value} - ${perfil.nome} (${perfil.watts}W)`;
@@ -427,41 +346,25 @@ function atualizarSelectPerfilEnergia() {
     });
 }
 
+// =================================================================
+// CÁLCULOS & BOM
+// =================================================================
+
 function adicionarLinhaBOM() {
     const container = document.getElementById("bomTbody");
     if (!container) return;
 
-    if (!dadosCarregados) {
-        alert("Aguarde o carregamento dos dados da planilha antes de adicionar insumos.");
-        return;
-    }
-
-    // Apenas insumos vindos da tabela Estoque de Insumos
-    const itensDisponiveis = LISTA_INSUMOS;
-    const tiposUnicos = [...new Set(itensDisponiveis.map(item => String(item.categoria || "INSUMOS").toUpperCase()))];
-    
+    const tiposUnicos = [...new Set(state.listaInsumos.map(i => i.categoria))];
     let optionsTipo = '<option value="">Selecione...</option>';
-    tiposUnicos.forEach(tipo => {
-        if (tipo) optionsTipo += `<option value="${tipo}">${tipo}</option>`;
-    });
+    tiposUnicos.forEach(tipo => { if (tipo) optionsTipo += `<option value="${tipo}">${tipo}</option>`; });
 
     const tr = document.createElement("tr");
     tr.className = "linha-bom";
     tr.innerHTML = `
-        <td>
-            <select class="bom-tipo">${optionsTipo}</select>
-        </td>
-        <td>
-            <select class="bom-insumo" disabled>
-                <option value="">Selecione o tipo primeiro...</option>
-            </select>
-        </td>
-        <td>
-            <input type="number" class="bom-qtd" step="any" placeholder="Ex: 150 (g) ou 1 (un)" required />
-        </td>
-        <td>
-            <button type="button" class="btn-danger btn-remover">❌</button>
-        </td>
+        <td><select class="bom-tipo">${optionsTipo}</select></td>
+        <td><select class="bom-insumo" disabled><option value="">Selecione o tipo...</option></select></td>
+        <td><input type="number" class="bom-qtd" step="any" placeholder="Qtd (g ou un)" required /></td>
+        <td><button type="button" class="btn-danger btn-remover" style="padding:4px 8px;">✕</button></td>
     `;
     container.appendChild(tr);
 }
@@ -469,7 +372,6 @@ function adicionarLinhaBOM() {
 function atualizarDropdownInsumos(selectTipo) {
     const tr = selectTipo.closest("tr");
     const selectInsumo = tr.querySelector(".bom-insumo");
-    const inputQtd = tr.querySelector(".bom-qtd");
     const tipoSelecionado = selectTipo.value;
 
     selectInsumo.innerHTML = '<option value="">Selecione o Insumo...</option>';
@@ -480,17 +382,12 @@ function atualizarDropdownInsumos(selectTipo) {
         return;
     }
 
-    inputQtd.placeholder = tipoSelecionado.toLowerCase().includes("filamento") ? "Ex: 150 (gramas)" : "Ex: 1 ou 4 (unidades)";
-
-    // Apenas insumos da lista de Estoque
-    const itensDisponiveis = LISTA_INSUMOS;
-    const itensFiltrados = itensDisponiveis.filter(item => String(item.categoria || "").toUpperCase() === tipoSelecionado.toUpperCase());
-    
+    const itensFiltrados = state.listaInsumos.filter(i => i.categoria === tipoSelecionado.toUpperCase());
     itensFiltrados.forEach(item => {
         const option = document.createElement("option");
         option.value = item.id;
-        option.textContent = `${item.id} - ${item.nome} (${item.categoria}) - R$ ${Number(item.precoUnidade || item.precoUnit || 0).toFixed(2)}`;
-        option.dataset.preco = item.precoUnidade ?? item.precoUnit ?? 0;
+        option.textContent = `${item.id} - ${item.nome} (${formatCurrency(item.precoUnidade)})`;
+        option.dataset.preco = item.precoUnidade;
         selectInsumo.appendChild(option);
     });
 
@@ -501,46 +398,18 @@ function atualizarDropdownInsumos(selectTipo) {
 function toggleDetalhesCusto() {
     const painel = document.getElementById("detalhesCusto");
     const texto = document.getElementById("toggleText");
-    const icone = document.getElementById("toggleIcon");
-
     if (!painel) return;
-
-    const estaOculto = painel.classList.contains("hidden");
-    if (estaOculto) {
-        painel.classList.remove("hidden");
-        if (texto) texto.textContent = "- Ocultar Detalhes";
-        if (icone) icone.style.transform = "rotate(180deg)";
-    } else {
-        painel.classList.add("hidden");
-        if (texto) texto.textContent = "+ Detalhes da Composição";
-        if (icone) icone.style.transform = "rotate(0deg)";
-    }
+    const oculto = painel.classList.toggle("hidden");
+    if (texto) texto.textContent = oculto ? "+ Detalhes" : "- Ocultar";
 }
 
 function extrairHorasDecimais(inputTempo) {
-    if (!inputTempo) return 0;
-    
-    let texto = String(inputTempo).trim().replace(',', '.');
-
+    let texto = String(inputTempo || "").trim().replace(',', '.');
     if (texto.includes(':')) {
-        const partes = texto.split(':');
-        const horas = parseFloat(partes[0]) || 0;
-        const minutos = parseFloat(partes[1]) || 0;
-        const segundos = parseFloat(partes[2]) || 0;
-
-        return horas + (minutos / 60) + (segundos / 3600);
+        const p = texto.split(':');
+        return (parseFloat(p[0]) || 0) + ((parseFloat(p[1]) || 0) / 60);
     }
-
-    const valorDecimal = parseFloat(texto);
-    return isNaN(valorDecimal) ? 0 : valorDecimal;
-}
-
-function obterWattsPerfilSelecionado(selectPerfil) {
-    if (!selectPerfil) return 0;
-    const perfilId = String(selectPerfil.value || "").trim();
-    const perfil = PERFIS_ENERGIA.find(item => String(item.idCus || "").toUpperCase() === perfilId.toUpperCase());
-    if (perfil && perfil.watts) return Number(perfil.watts) || 0;
-    return parseFloat(selectPerfil.options[selectPerfil.selectedIndex]?.dataset?.watts) || 0;
+    return parseFloat(texto) || 0;
 }
 
 function calcularTotais() {
@@ -554,130 +423,103 @@ function calcularTotais() {
 
         if (selectInsumo && selectInsumo.value && qtdInput > 0) {
             const precoUnit = parseFloat(selectInsumo.options[selectInsumo.selectedIndex]?.dataset?.preco) || 0;
-            let qtdParaCalculo = qtdInput;
+            let qtdCalculo = qtdInput;
 
             if (tipo.toLowerCase().includes("filamento")) {
                 const pesoKg = qtdInput / 1000;
                 pesoFilamentosKg += pesoKg;
-                qtdParaCalculo = pesoKg;
+                qtdCalculo = pesoKg;
             }
-            custoMateriais += (qtdParaCalculo * precoUnit);
+            custoMateriais += (qtdCalculo * precoUnit);
         }
     });
 
-    const inputTempo = document.getElementById("tempo")?.value || "";
-    const horasTotal = extrairHorasDecimais(inputTempo);
+    const horasTotal = extrairHorasDecimais(document.getElementById("tempo")?.value);
     const selectPerfil = document.getElementById("perfilEnergia");
-    const watts = obterWattsPerfilSelecionado(selectPerfil);
+    const watts = parseFloat(selectPerfil?.options[selectPerfil.selectedIndex]?.dataset?.watts) || 0;
 
-    const kwhConsumido = (watts / 1000) * horasTotal;
-    const tarifaKwh = TAXAS_SISTEMA["CUS_01"] ? TAXAS_SISTEMA["CUS_01"].valor : 0;
-    const depHora   = TAXAS_SISTEMA["CUS_02"] ? TAXAS_SISTEMA["CUS_02"].valor : 0;
-    const manHora   = TAXAS_SISTEMA["CUS_03"] ? TAXAS_SISTEMA["CUS_03"].valor : 0;
-    const pctMargem = TAXAS_SISTEMA["CUS_04"] ? TAXAS_SISTEMA["CUS_04"].valor : 0;
+    const kwh = (watts / 1000) * horasTotal;
+    const t01 = state.taxasSistema["CUS_01"]?.valor || 0;
+    const t02 = state.taxasSistema["CUS_02"]?.valor || 0;
+    const t03 = state.taxasSistema["CUS_03"]?.valor || 0;
+    const t04 = state.taxasSistema["CUS_04"]?.valor || 0;
 
-    const custoEnergia = kwhConsumido * tarifaKwh;
-    const custoDepreciacao = horasTotal * depHora;
-    const custoManutencao = horasTotal * manHora;
+    const cEnergia = kwh * t01;
+    const cDeprec = horasTotal * t02;
+    const cManut = horasTotal * t03;
+    const subtotal = custoMateriais + cEnergia + cDeprec + cManut;
+    const cMargem = subtotal * t04;
+    const totalFinal = subtotal + cMargem;
 
-    const subtotal = custoMateriais + custoEnergia + custoDepreciacao + custoManutencao;
-    const valorMargem = subtotal * pctMargem;
-    const custoTotalFinal = subtotal + valorMargem;
-
-    if (document.getElementById("pesoTotal")) document.getElementById("pesoTotal").textContent = pesoFilamentosKg.toFixed(3) + " kg";
-    if (document.getElementById("custoTotal")) document.getElementById("custoTotal").textContent = "R$ " + custoTotalFinal.toFixed(2).replace(".", ",");
-    if (document.getElementById("det-insumos")) document.getElementById("det-insumos").textContent = "R$ " + custoMateriais.toFixed(2).replace(".", ",");
-    if (document.getElementById("det-kwh-val")) document.getElementById("det-kwh-val").textContent = kwhConsumido.toFixed(2);
-    if (document.getElementById("det-energia")) document.getElementById("det-energia").textContent = "R$ " + custoEnergia.toFixed(2).replace(".", ",");
-    if (document.getElementById("det-depreciacao")) document.getElementById("det-depreciacao").textContent = "R$ " + custoDepreciacao.toFixed(2).replace(".", ",");
-    if (document.getElementById("det-manutencao")) document.getElementById("det-manutencao").textContent = "R$ " + custoManutencao.toFixed(2).replace(".", ",");
-    if (document.getElementById("det-margem")) document.getElementById("det-margem").textContent = "R$ " + valorMargem.toFixed(2).replace(".", ",");
+    document.getElementById("pesoTotal").textContent = `${formatNumber(pesoFilamentosKg, 3)} kg`;
+    document.getElementById("custoTotal").textContent = formatCurrency(totalFinal);
+    document.getElementById("det-insumos").textContent = formatCurrency(custoMateriais);
+    document.getElementById("det-kwh-val").textContent = formatNumber(kwh, 2);
+    document.getElementById("det-energia").textContent = formatCurrency(cEnergia);
+    document.getElementById("det-depreciacao").textContent = formatCurrency(cDeprec);
+    document.getElementById("det-manutencao").textContent = formatCurrency(cManut);
+    document.getElementById("det-margem").textContent = formatCurrency(cMargem);
 }
+
+// =================================================================
+// SUBMISSÃO
+// =================================================================
 
 async function salvarProduto(event) {
     event.preventDefault();
-
     const btnSubmit = document.querySelector("#productForm button[type='submit']");
     if (!btnSubmit || btnSubmit.disabled) return;
 
     btnSubmit.disabled = true;
     const textoOriginal = btnSubmit.innerHTML;
-    btnSubmit.innerHTML = `<span>Salvando no Sheets...</span>`;
+    btnSubmit.innerHTML = `<span>Enviando...</span>`;
 
     try {
-        const horasTotal = extrairHorasDecimais(document.getElementById("tempo")?.value || "");
+        const horasTotal = extrairHorasDecimais(document.getElementById("tempo")?.value);
         const selectPerfil = document.getElementById("perfilEnergia");
-        const watts = obterWattsPerfilSelecionado(selectPerfil);
-
+        const watts = parseFloat(selectPerfil?.options[selectPerfil.selectedIndex]?.dataset?.watts) || 0;
         const kwhConsumido = Number(((watts / 1000) * horasTotal).toFixed(4));
-        const horasParaSalvar = Number(horasTotal.toFixed(4));
 
         const bom = [];
-        let custoMateriais = 0;
         let pesoFilamentosKg = 0;
 
         document.querySelectorAll(".linha-bom").forEach(tr => {
             const selectInsumo = tr.querySelector(".bom-insumo");
-            const itemId = selectInsumo ? selectInsumo.value : "";
+            const itemId = selectInsumo?.value;
             const categoria = tr.querySelector(".bom-tipo")?.value || "";
             const qtdInput = parseFloat(tr.querySelector(".bom-qtd")?.value) || 0;
 
             if (itemId && qtdInput > 0) {
-                let quantidadeFinal = qtdInput;
+                let qtdFinal = qtdInput;
                 if (categoria.toLowerCase().includes("filamento")) {
-                    const pesoKg = qtdInput / 1000;
-                    pesoFilamentosKg += pesoKg;
-                    quantidadeFinal = Number(pesoKg.toFixed(4));
+                    qtdFinal = Number((qtdInput / 1000).toFixed(4));
+                    pesoFilamentosKg += qtdFinal;
                 }
-
-                const item = LISTA_INSUMOS.find(i => i.id === itemId);
-                const nomeItem = item ? item.nome : (selectInsumo.options[selectInsumo.selectedIndex]?.text || itemId);
-                const categoriaItem = String(item ? item.categoria : categoria || "INSUMOS").toUpperCase();
-                const precoUnit = parseFloat(selectInsumo.options[selectInsumo.selectedIndex]?.dataset?.preco) || (item ? item.precoUnidade : 0);
-
-                custoMateriais += (quantidadeFinal * precoUnit);
-
                 bom.push({
                     id: itemId,
-                    categoria: categoriaItem,
-                    nome: nomeItem,
-                    quantidade: quantidadeFinal
+                    categoria: categoria.toUpperCase(),
+                    quantidade: qtdFinal
                 });
             }
         });
 
-        const produto = {
-            nome: document.getElementById("nome")?.value || "Sem Nome",
-            categoria: document.getElementById("categoria")?.value || "Geral",
-            foto: document.getElementById("foto")?.value || "",
-            arquivo: document.getElementById("arquivo")?.value || "",
-            tempoImpressao: Number(horasTotal.toFixed(2)),
-            pesoProd: Number(pesoFilamentosKg.toFixed(3))
+        if (kwhConsumido > 0) bom.push({ idCus: "CUS_01", quantidade: kwhConsumido });
+        if (horasTotal > 0) {
+            bom.push({ idCus: "CUS_02", quantidade: horasTotal });
+            bom.push({ idCus: "CUS_03", quantidade: horasTotal });
+        }
+
+        const payload = {
+            produto: {
+                nome: document.getElementById("nome")?.value,
+                categoria: document.getElementById("categoria")?.value,
+                foto: document.getElementById("foto")?.value,
+                arquivo: document.getElementById("arquivo")?.value,
+                tempoImpressao: Number(horasTotal.toFixed(2)),
+                pesoProd: Number(pesoFilamentosKg.toFixed(3))
+            },
+            bom
         };
-
-        const tarifaKwh = TAXAS_SISTEMA["CUS_01"] ? TAXAS_SISTEMA["CUS_01"].valor : 0;
-        const depHora   = TAXAS_SISTEMA["CUS_02"] ? TAXAS_SISTEMA["CUS_02"].valor : 0;
-        const manHora   = TAXAS_SISTEMA["CUS_03"] ? TAXAS_SISTEMA["CUS_03"].valor : 0;
-
-        const custoEnergia = kwhConsumido * tarifaKwh;
-        const custoDepreciacao = horasParaSalvar * depHora;
-        const custoManutencao = horasParaSalvar * manHora;
-
-        // Injeta automaticamente as taxas em CAIXA ALTA
-        if (kwhConsumido > 0) {
-            bom.push({ idCus: "CUS_01", tipo: "ENERGIA", nome: TAXAS_SISTEMA["CUS_01"]?.nome || "ENERGIA Tarifa kWh", quantidade: kwhConsumido });
-        }
-        if (horasParaSalvar > 0) {
-            bom.push({ idCus: "CUS_02", tipo: "OPERAÇÃO", nome: TAXAS_SISTEMA["CUS_02"]?.nome || "OPERAÇÃO MÉD DEPREC P/HORA", quantidade: horasParaSalvar });
-            bom.push({ idCus: "CUS_03", tipo: "OPERAÇÃO", nome: TAXAS_SISTEMA["CUS_03"]?.nome || "OPERAÇÃO MÉD MANUT P/HORA", quantidade: horasParaSalvar });
-        }
-
-        const subtotalDireto = Number((custoMateriais + custoEnergia + custoDepreciacao + custoManutencao).toFixed(2));
-        if (TAXAS_SISTEMA["CUS_04"] && subtotalDireto > 0) {
-            bom.push({ idCus: "CUS_04", tipo: "MARGEM", nome: TAXAS_SISTEMA["CUS_04"]?.nome || "Margem de Seguridade", quantidade: subtotalDireto });
-        }
-
-        const payload = { produto, bom };
 
         const response = await fetch(APPS_SCRIPT_URL, {
             method: "POST",
@@ -686,18 +528,17 @@ async function salvarProduto(event) {
         });
 
         const result = await response.json();
-
         if (result.status === "success") {
-            alert(`✅ ${result.message}\nSKU Gerado: ${result.sku}`);
+            alert(`✅ Produto registrado com sucesso!\nSKU: ${result.sku || 'N/A'}`);
             document.getElementById("productForm").reset();
             document.getElementById("bomTbody").innerHTML = "";
             adicionarLinhaBOM();
             calcularTotais();
         } else {
-            alert(`❌ Erro ao salvar: ${result.message}`);
+            alert(`❌ Erro: ${result.message}`);
         }
-    } catch (error) {
-        alert("❌ Erro ao conectar com o Google Sheets: " + error.message);
+    } catch (err) {
+        alert("❌ Erro de conexão com o servidor: " + err.message);
     } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = textoOriginal;
